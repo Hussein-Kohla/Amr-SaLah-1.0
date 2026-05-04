@@ -28,7 +28,7 @@ const reviews = [
     id: 2,
     nameAr: 'خالد عبد الله',
     nameEn: 'Khaled Abdallah',
-    textAr: 'شغل احترافي جداً والأسعار ممتازة مقابل الجودة اللي بتاخدها. أنصح الجميع بتجربة صالون عمرو صالح.',
+    textAr: 'شغل احترافي جداً والأسعار ممتازة مقابل الجودة اللي بتاخدها. أنصح الجميع بتجربة صالون عمرو صلاح.',
     textEn: 'Very professional work and excellent prices for the quality you get. I highly recommend Amr SaLah salon.',
     rating: 5,
   },
