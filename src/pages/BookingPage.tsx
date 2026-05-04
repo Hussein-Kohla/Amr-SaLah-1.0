@@ -1,0 +1,147 @@
+import { useState, useEffect } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useQuery } from 'convex/react'
+import { useTranslation } from 'react-i18next'
+import { motion, AnimatePresence } from 'framer-motion'
+import { api } from '../../convex/_generated/api'
+import type { Id } from '../../convex/_generated/dataModel'
+import Navbar from '../components/Navbar'
+import DateStrip from '../components/DateStrip'
+import BarberSelector from '../components/BarberSelector'
+import SlotGrid from '../components/SlotGrid'
+import BookingModal from '../components/BookingModal'
+
+export default function BookingPage() {
+  const { t, i18n } = useTranslation()
+  const isRTL = i18n.language === 'ar'
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+
+  const todayStr = new Date().toISOString().split('T')[0]
+  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') ?? todayStr)
+  const [selectedBarberId, setSelectedBarberId] = useState<Id<'barbers'> | null>(null)
+  const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+
+  const barbers = useQuery(api.barbers.getBarbers)
+  const slots = useQuery(
+    api.appointments.getSlots,
+    selectedBarberId ? { barberId: selectedBarberId, date: selectedDate } : 'skip'
+  )
+
+  useEffect(() => {
+    if (barbers && barbers.length > 0) {
+      const isValid = barbers.some((b: any) => b._id === selectedBarberId)
+      if (!isValid) {
+        setSelectedBarberId(barbers[0]._id)
+        setSelectedTime(null)
+      }
+    }
+  }, [barbers, selectedBarberId])
+
+  const handleDateChange = (date: string) => { setSelectedDate(date); setSelectedTime(null) }
+  const handleBarberChange = (id: string) => { setSelectedBarberId(id as Id<'barbers'>); setSelectedTime(null) }
+  const handleSlotClick = (time: string) => { setSelectedTime(time); setIsModalOpen(true) }
+
+  const selectedBarber = barbers?.find((b: { _id: string }) => b._id === selectedBarberId)
+
+  return (
+    <div className="min-h-screen bg-primary text-surface" dir={isRTL ? 'rtl' : 'ltr'}>
+      <Navbar />
+
+      {/* Page header */}
+      <div className="pt-24 pb-6 px-4 border-b border-white/5">
+        <div className="max-w-2xl mx-auto">
+          <button
+            onClick={() => navigate('/')}
+            className={`flex items-center gap-2 text-surface/40 hover:text-accent transition-colors text-sm mb-4 cursor-pointer ${isRTL ? 'font-arabic flex-row-reverse' : 'font-english'}`}
+            aria-label={t('common.back')}
+          >
+            <span className={isRTL ? 'rotate-180 inline-block' : 'inline-block'}>←</span>
+            {t('common.back')}
+          </button>
+          <h1 className={`text-3xl font-bold text-white mb-1 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+            {t('booking.pageTitle')}
+          </h1>
+          <p className={`text-surface/40 text-sm ${isRTL ? 'font-arabic' : 'font-english'}`}>
+            {t('booking.pageSubtitle')}
+          </p>
+        </div>
+      </div>
+
+      <main className="max-w-2xl mx-auto px-4 py-8 space-y-8">
+        {/* Step 1 */}
+        <section aria-label={t('booking.step1')}>
+          <h2 className={`text-xs font-semibold tracking-widest text-accent/70 uppercase mb-4 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+            {t('booking.step1')}
+          </h2>
+          <DateStrip selectedDate={selectedDate} onSelectDate={handleDateChange} />
+        </section>
+
+        {/* Step 2 */}
+        <section aria-label={t('booking.step2')}>
+          <h2 className={`text-xs font-semibold tracking-widest text-accent/70 uppercase mb-4 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+            {t('booking.step2')}
+          </h2>
+          {barbers === undefined ? (
+            <div className="flex gap-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="flex flex-col items-center gap-2 animate-pulse">
+                  <div className="w-14 h-14 rounded-full bg-white/10" />
+                  <div className="w-16 h-3 rounded-full bg-white/10" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <BarberSelector barbers={barbers} selectedId={selectedBarberId} onSelect={handleBarberChange} />
+          )}
+        </section>
+
+        <div className="h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+
+        {/* Step 3 */}
+        <section aria-label={t('booking.step3')}>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className={`text-xs font-semibold tracking-widest text-accent/70 uppercase ${isRTL ? 'font-arabic' : 'font-english'}`}>
+              {t('booking.step3')}
+            </h2>
+            <div className="flex items-center gap-3 text-[10px] text-surface/40">
+              <span className="flex items-center gap-1 font-english">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                {t('booking.available')}
+              </span>
+              <span className="flex items-center gap-1 font-english">
+                <span className="w-2 h-2 rounded-full bg-red-400/60 inline-block" />
+                {t('booking.booked')}
+              </span>
+            </div>
+          </div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${selectedBarberId}-${selectedDate}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+            >
+              <SlotGrid slots={slots} onSlotClick={handleSlotClick} selectedTime={selectedTime} />
+            </motion.div>
+          </AnimatePresence>
+        </section>
+      </main>
+
+      {selectedBarber && selectedTime && (
+        <BookingModal
+          isOpen={isModalOpen}
+          onClose={() => { setIsModalOpen(false); setSelectedTime(null) }}
+          barberId={selectedBarber._id}
+          barberNameAr={selectedBarber.nameAr}
+          barberNameEn={selectedBarber.nameEn}
+          date={selectedDate}
+          timeSlot={selectedTime}
+          onConfirmed={() => {}}
+        />
+      )}
+    </div>
+  )
+}

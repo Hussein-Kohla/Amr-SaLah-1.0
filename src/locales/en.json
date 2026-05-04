@@ -1,0 +1,105 @@
+{
+  "translation": {
+    "nav": {
+      "logo": "Amr SaLah _ Barber Shop",
+      "langToggle": "عربي"
+    },
+    "hero": {
+      "label": "✦ Premium Barbershop ✦",
+      "titleMain": "Amr",
+      "titleAccent": "SaLah",
+      "subtitle": "An exceptional look that reflects your refined taste — a premium grooming experience by expert barbers.",
+      "scrollHint": "Scroll to discover"
+    },
+    "common": {
+      "bookNow": "Book Now",
+      "back": "Back",
+      "close": "Close",
+      "tryAgain": "Try Again",
+      "loading": "Loading..."
+    },
+    "services": {
+      "sectionLabel": "What We Offer",
+      "sectionTitle": "Our Services",
+      "items": {
+        "haircut": { "name": "Precision Haircut", "desc": "A meticulously crafted cut tailored to your features and personal style" },
+        "beard": { "name": "Beard Grooming", "desc": "Expert razor shaping that defines your look with sharp, clean lines" },
+        "facial": { "name": "Skin Care Treatment", "desc": "A revitalizing facial session that restores radiance and hydrates deeply" },
+        "royal": { "name": "The Royal Package", "desc": "An all-inclusive grooming ritual — haircut, beard & full treatment in one" }
+      }
+    },
+    "barbers": {
+      "sectionLabel": "Meet The Team",
+      "sectionTitle": "Our Expert Barbers",
+      "noBarbers": "No barbers available at the moment"
+    },
+    "gallery": {
+      "sectionLabel": "Our Work",
+      "sectionTitle": "Gallery",
+      "captions": {
+        "cut": "Professional Cut",
+        "interior": "Luxury Ambiance",
+        "tools": "Craft Tools",
+        "look": "Perfect Look"
+      }
+    },
+    "location": {
+      "sectionLabel": "Visit Us",
+      "sectionTitle": "Location & Hours",
+      "address": "Address",
+      "addressValue": "Nile Corniche - Behind Dokkan El Hai Supermarket - Beni Suef",
+      "phone": "Phone",
+      "hours": "Working Hours",
+      "days": {
+        "allWeek": "Daily"
+      }
+    },
+    "footer": {
+      "tagline": "A premium grooming experience by expert barbers. We care about your look.",
+      "quickLinks": "Quick Links",
+      "contact": "Get In Touch",
+      "city": "Beni Suef, Egypt",
+      "rights": "All rights reserved",
+      "links": {
+        "services": "Services",
+        "team": "Team",
+        "gallery": "Gallery",
+        "location": "Location"
+      }
+    },
+    "booking": {
+      "pageTitle": "Book Your Appointment",
+      "pageSubtitle": "Choose your barber, date and preferred time",
+      "step1": "1 — Select Date",
+      "step2": "2 — Select Barber",
+      "step3": "3 — Select Time",
+      "today": "Today",
+      "available": "Available",
+      "booked": "Booked",
+      "noSlots": "No slots available"
+    },
+    "modal": {
+      "title": "Confirm Booking",
+      "barberLabel": "Barber",
+      "dateLabel": "Date",
+      "timeLabel": "Time",
+      "nameLabel": "Full Name",
+      "namePlaceholder": "Enter your full name",
+      "ageLabel": "Age",
+      "agePlaceholder": "e.g. 25",
+      "phoneLabel": "Phone Number",
+      "phonePlaceholder": "e.g. 0501234567",
+      "confirmBtn": "Confirm Booking",
+      "bookingBtn": "Booking...",
+      "successTitle": "Booking Confirmed!",
+      "successSubtitle": "We look forward to seeing you",
+      "errorTitle": "Something went wrong",
+      "nameMin": "Name must be at least 2 characters",
+      "nameMax": "Name is too long",
+      "ageRange": "Age must be between 5 and 99",
+      "phoneInvalid": "Invalid phone number (e.g. 0501234567)",
+      "slotTaken": "Sorry, this slot was just booked. Please choose another time.",
+      "genericError": "Something went wrong. Please try again."
+    }
+  }
+}
