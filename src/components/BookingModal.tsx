@@ -93,127 +93,12 @@ export default function BookingModal({
   const [errors, setErrors] = useState<FormErrors>({})
   const [modalState, setModalState] = useState<ModalState>('form')
   const [serverError, setServerError] = useState('')
-  const [wantsReminder, setWantsReminder] = useState(true)
+
   const drawerRef = useRef<HTMLDivElement>(null)
   const firstInputRef = useRef<HTMLInputElement>(null)
 
-  const [lastAppointmentId, setLastAppointmentId] = useState<Id<'appointments'> | null>(null)
-
-  const getMinutesLeft = () => {
-    try {
-      if (timeSlot.startsWith('Waiting')) return null
-      const timeMatch = timeSlot.match(/(\d+):(\d+)\s*(AM|PM)?/i)
-      if (!timeMatch) return null
-      let hours = parseInt(timeMatch[1])
-      const mins = parseInt(timeMatch[2])
-      const period = timeMatch[3]?.toUpperCase()
-      if (period === 'PM' && hours !== 12) hours += 12
-      if (period === 'AM' && hours === 12) hours = 0
-      const target = new Date(date)
-      target.setHours(hours, mins, 0, 0)
-      const now = new Date()
-      return Math.floor((target.getTime() - now.getTime()) / 60000)
-    } catch (e) {
-      return null
-    }
-  }
-
-  // Helper to convert VAPID key
-  const urlBase64ToUint8Array = (base64String: string) => {
-    const padding = '='.repeat((4 - base64String.length % 4) % 4);
-    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-    const rawData = window.atob(base64);
-    const outputArray = new Uint8Array(rawData.length);
-    for (let i = 0; i < rawData.length; ++i) {
-      outputArray[i] = rawData.charCodeAt(i);
-    }
-    return outputArray;
-  };
-
-  const saveAndSchedulePush = useMutation(api.notifications.saveAndScheduleReminder)
-  const sendTestPush = useAction(api.push.sendPushNotification);
-
-  const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) {
-      alert(isRTL ? 'متصفحك لا يدعم الإشعارات' : 'Your browser does not support notifications');
-      return;
-    }
-    
-    // Check if already denied
-    if (Notification.permission === 'denied') {
-      alert(isRTL ? 'الإشعارات محظورة في متصفحك. يرجى تفعيلها من إعدادات الموقع.' : 'Notifications are blocked. Please enable them in your browser settings.');
-      return;
-    }
-
-    const permission = await Notification.requestPermission()
-    if (permission === 'granted') {
-      setWantsReminder(true)
-      const minutesLeft = getMinutesLeft()
-
-      // --- PUSH NOTIFICATION SETUP ---
-      if ('serviceWorker' in navigator && 'PushManager' in window) {
-        try {
-          const reg = await navigator.serviceWorker.ready;
-          const VAPID_PUBLIC_KEY = "BB4UntPs40JhTTaJoTi5f-MYKLNxwg7MRKVPW2OgYBKpEeWlSXTFp5NAc1qE75EMo74RLLYJmZR-vvxImZa57-c";
-          
-          // FORCE REFRESH: Unsubscribe old and subscribe new to ensure VAPID keys match
-          let sub = await reg.pushManager.getSubscription();
-          if (sub) {
-            await sub.unsubscribe();
-            // Small delay to let browser process unsubscription
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
-          
-          sub = await reg.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-          });
-
-          // Send a test notification immediately to confirm it works
-          const result = await sendTestPush({
-            subscription: JSON.parse(JSON.stringify(sub)), // Convert to plain object
-            title: isRTL ? '✅ صالون عمرو صلاح' : '✅ Amr Salah Salon',
-            body: isRTL ? 'الإشعارات تعمل بنجاح! سنقوم بتذكيرك قبل موعدك.' : 'Notifications are working! We will remind you before your appointment.',
-            url: window.location.origin
-          });
-
-          if (result.success) {
-            alert(isRTL ? 'تم تفعيل الإشعارات بنجاح! ستصلك رسالة تجريبية الآن.' : 'Notifications enabled! You should receive a test message now.');
-          } else {
-            alert(isRTL ? 'فشل إرسال الإشعار التجريبي: ' + result.error : 'Test notification failed: ' + result.error);
-          }
-
-          // Schedule 15-min reminder on the server if appointment exists
-          if (lastAppointmentId && minutesLeft !== null) {
-            const reminderTime = Date.now() + (minutesLeft - 15) * 60000;
-            if (reminderTime > Date.now()) {
-              await saveAndSchedulePush({
-                appointmentId: lastAppointmentId,
-                subscription: JSON.parse(JSON.stringify(sub)), // Convert to plain object
-                scheduledTime: reminderTime,
-                title: isRTL ? '⏰ تذكير بموعدك' : '⏰ Appointment Reminder',
-                body: isRTL ? 'باقي 15 دقيقة على موعد حلاقتك.' : '15 minutes left until your appointment.',
-                email: form.email.trim().toLowerCase(),
-                customerName: form.name.trim(),
-              });
-            }
-          }
-        } catch (err) {
-          console.error("Push subscription failed", err);
-          alert(isRTL ? 'حدث خطأ أثناء تفعيل الإشعارات: ' + String(err) : 'Error enabling notifications: ' + String(err));
-        }
-      } else {
-        // Fallback for browsers with Notification but no Push
-        const title = isRTL ? '✅ تم التفعيل' : '✅ Enabled';
-        const body = isRTL ? 'سيتم تنبيهك في هذا المتصفح.' : 'You will be notified in this browser.';
-        new Notification(title, { body, icon: '/favicon.svg' });
-      }
-    } else {
-      setWantsReminder(false)
-    }
-  }
-
   const createAppointment = useMutation(api.appointments.createAppointment)
+
   const sendOtpEmail = useAction(api.auth.sendOtpEmail)
   const verifyOtp = useMutation(api.auth.verifyOtp)
 
@@ -223,26 +108,7 @@ export default function BookingModal({
     localStorage.setItem('barberpro_booking_form', JSON.stringify(dataToSave))
   }, [form])
 
-  // T-Automatic Reminder 15 mins before
-  useEffect(() => {
-    if (modalState === 'success' && wantsReminder && Notification.permission === 'granted') {
-      const minutesLeft = getMinutesLeft()
-      if (minutesLeft !== null && minutesLeft > 15) {
-        const delayMs = (minutesLeft - 15) * 60 * 1000
-        const timer = setTimeout(() => {
-          const title = isRTL ? 'تذكير بالموعد' : 'Appointment Reminder'
-          const body = isRTL ? 'باقي 15 دقيقة على موعد حجزك' : '15 minutes left for your appointment'
-          if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.ready.then(reg => reg.showNotification(title, { body, icon: '/favicon.svg' }))
-          } else {
-            new Notification(title, { body, icon: '/favicon.svg' })
-          }
-        }, delayMs)
-        return () => clearTimeout(timer)
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalState, wantsReminder, date, timeSlot])
+
 
   // T-51: Escape key closes modal
   useEffect(() => {
@@ -305,7 +171,7 @@ export default function BookingModal({
         code: form.otp,
         phone: form.phone.replace(/\s/g, ''),
       })
-      const id = await createAppointment({
+      await createAppointment({
         barberId,
         date,
         timeSlot,
@@ -314,10 +180,11 @@ export default function BookingModal({
         customerPhone: form.phone.replace(/\s/g, ''),
         customerEmail: form.email.trim().toLowerCase(),
         userId: userId ?? undefined,
-        wantsReminder,
+        wantsReminder: true,
       })
-      setLastAppointmentId(id)
       setModalState('success')
+
+
       localStorage.removeItem('barberpro_booking_form')
       onConfirmed()
     } catch (err) {
@@ -469,25 +336,24 @@ export default function BookingModal({
                     </motion.div>
                   </div>
 
-                  {/* Notification Card matching user image */}
-                  <motion.button
+                  {/* Email Notification Card */}
+                  <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.5 }}
-                    onClick={requestNotificationPermission}
-                    className="w-full flex flex-col items-center justify-center gap-3 py-8 px-5 rounded-[2rem] border border-emerald-500/20 bg-[#111122]/50 backdrop-blur-md transition-all duration-300 group hover:bg-emerald-500/5 mb-6 shadow-2xl relative overflow-hidden"
+                    className="w-full flex flex-col items-center justify-center gap-3 py-8 px-5 rounded-[2rem] border border-emerald-500/20 bg-[#111122]/50 backdrop-blur-md transition-all duration-300 mb-6 shadow-2xl relative overflow-hidden"
                   >
                     <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
-                    <span className="text-4xl filter drop-shadow-[0_0_15px_rgba(234,179,8,0.6)] mb-1">🔔</span>
+                    <span className="text-4xl filter drop-shadow-[0_0_15px_rgba(234,179,8,0.6)] mb-1">📧</span>
                     <div className="flex flex-col gap-1.5 items-center relative z-10">
                       <span className={`text-emerald-400 text-lg font-bold leading-tight ${isRTL ? 'font-arabic' : 'font-english'}`}>
-                        {isRTL ? 'سيتم إرسال إشعار قبل الموعد بـ 15 دقيقة' : 'Notification will be sent 15m before'}
+                        {isRTL ? 'سيصلك تذكير على الإيميل قبل الموعد بـ 15 دقيقة' : 'Email reminder 15m before'}
                       </span>
-                      <span className={`text-emerald-400/90 text-sm font-semibold underline underline-offset-4 decoration-emerald-500/40 group-hover:decoration-emerald-400 transition-all ${isRTL ? 'font-arabic' : 'font-english'}`}>
-                        {isRTL ? 'اضغط لإعطاء الإذن' : 'Click to grant permission'}
+                      <span className={`text-emerald-400/70 text-xs font-medium ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                        {form.email}
                       </span>
                     </div>
-                  </motion.button>
+                  </motion.div>
 
                   <button
                     onClick={handleClose}

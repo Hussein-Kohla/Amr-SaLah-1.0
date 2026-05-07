@@ -6,44 +6,14 @@ import { Resend } from "resend";
 export const sendReminder = action({
   args: {
     email: v.optional(v.string()),
-    subscription: v.optional(v.any()),
     title: v.string(),
     body: v.string(),
     customerName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const results = { push: false, email: false };
+    const results = { email: false };
 
-    // 1. Send Push Notification
-    if (args.subscription) {
-      try {
-        const webpushModule = await import("web-push");
-        const webpush = (webpushModule as any).default || webpushModule;
-
-        const VAPID_PUBLIC = "BB4UntPs40JhTTaJoTi5f-MYKLNxwg7MRKVPW2OgYBKpEeWlSXTFp5NAc1qE75EMo74RLLYJmZR-vvxImZa57-c";
-        const VAPID_PRIVATE = "Gkad0jPeREfwBfrdRF2LZKwhpr-5_yw6RO0-AKE7-uI";
-
-        webpush.setVapidDetails(
-          "mailto:example@yourdomain.com",
-          VAPID_PUBLIC,
-          VAPID_PRIVATE
-        );
-
-        await webpush.sendNotification(
-          args.subscription,
-          JSON.stringify({
-            title: args.title,
-            body: args.body,
-            url: "/",
-          })
-        );
-        results.push = true;
-      } catch (error) {
-        console.error("Error sending push reminder:", error);
-      }
-    }
-
-    // 2. Send Email Notification
+    // Send Email Notification
     if (args.email) {
       const resendApiKey = process.env.RESEND_API_KEY;
       if (resendApiKey) {
@@ -77,3 +47,4 @@ export const sendReminder = action({
     return results;
   },
 });
+

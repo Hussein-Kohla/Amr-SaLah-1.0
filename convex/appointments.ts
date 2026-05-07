@@ -1,7 +1,34 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
+
+function getReminderTime(date: string, timeSlot: string) {
+  if (timeSlot.startsWith('Waiting')) return null;
+  try {
+    const timeMatch = timeSlot.match(/(\d+):(\d+)\s*(AM|PM)?/i);
+    if (!timeMatch) return null;
+    let hours = parseInt(timeMatch[1]);
+    const mins = parseInt(timeMatch[2]);
+    const period = timeMatch[3]?.toUpperCase();
+    if (period === 'PM' && hours !== 12) hours += 12;
+    if (period === 'AM' && hours === 12) hours = 0;
+    
+    // date is YYYY-MM-DD. We assume Egypt time (UTC+3)
+    // To handle this correctly in Convex (which uses UTC), we should construct the date 
+    // and then subtract 3 hours to get UTC, then subtract 15 mins.
+    const [year, month, day] = date.split('-').map(Number);
+    const targetDate = new Date(Date.UTC(year, month - 1, day, hours, mins));
+    // Egypt is UTC+3, so we subtract 3 hours from the Target (which is Egypt time) to get UTC
+    const utcTarget = targetDate.getTime() - (3 * 60 * 60 * 1000);
+    
+    return utcTarget - (15 * 60 * 1000);
+  } catch (e) {
+    return null;
+  }
+}
 
 export const getSlots = query({
+// ... (rest of getSlots)
   args: {
     barberId: v.id("barbers"),
     date: v.string(),
@@ -191,7 +218,21 @@ export const createAppointment = mutation({
       createdAt: Date.now(),
     });
 
+    // Automatically schedule email reminder 15 mins before
+    if (args.customerEmail) {
+      const reminderTime = getReminderTime(args.date, args.timeSlot);
+      if (reminderTime && reminderTime > Date.now()) {
+        await ctx.scheduler.runAt(reminderTime, api.reminders.sendReminder, {
+          email: args.customerEmail,
+          customerName: args.customerName,
+          title: "⏰ تذكير بموعد حلاقتك - صالون عمرو صلاح",
+          body: `باقي 15 دقيقة على موعد حجزك (${args.timeSlot}) يوم ${args.date}. ننتظرك بكل حب!`,
+        });
+      }
+    }
+
     return id;
   },
 });
+
 
