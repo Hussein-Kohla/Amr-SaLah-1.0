@@ -75,9 +75,9 @@ function ReviewCard({
     <div
       className={`
         relative
-        w-[320px]
+        w-[300px]
         sm:w-[450px]
-        h-[450px]
+        h-[360px]
         sm:h-[400px]
         rounded-[2.5rem]
         border
@@ -89,7 +89,7 @@ function ReviewCard({
             ? 'bg-white/[0.08] border-white/20 backdrop-blur-3xl shadow-[0_20px_80px_rgba(0,0,0,0.6)] scale-100 opacity-100'
             : 'bg-white/[0.02] border-white/5 opacity-20 scale-75 blur-[2px] pointer-events-none'
         }
-        p-10
+        p-8
         overflow-hidden
       `}
     >
@@ -106,11 +106,11 @@ function ReviewCard({
       <div className="relative z-10 h-full flex flex-col">
         <StarRating rating={review.rating} />
 
-        <p className={`text-white text-xl sm:text-2xl leading-relaxed text-center mt-4 italic font-medium flex-grow flex items-center ${isRTL ? 'font-arabic' : 'font-english'}`}>
+        <p className={`text-white text-base sm:text-2xl leading-relaxed text-center mt-2 italic font-medium flex-grow flex items-center ${isRTL ? 'font-arabic' : 'font-english'}`}>
           "{isRTL ? review.textAr : review.textEn}"
         </p>
 
-        <div className="mt-auto flex flex-col items-center pt-10">
+        <div className="mt-auto flex flex-col items-center pt-4">
           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-accent/30 to-accent/10 border border-accent/40 flex items-center justify-center text-accent font-bold text-2xl shadow-[0_0_30px_rgba(201,168,76,0.3)]">
             {(isRTL ? review.nameAr : review.nameEn).charAt(0)}
           </div>
@@ -139,18 +139,34 @@ export default function ReviewsSection() {
   })
 
   const [currentIndex, setCurrentIndex] = useState(0)
-  const [direction, setDirection] = useState(1) // 1 = forward (enters from right), -1 = backward (enters from left)
+  const [direction, setDirection] = useState(1)
+  const touchStartX = useRef<number | null>(null)
 
-  // Next: card enters from the right side (positive x), exits to left (negative x)
   const nextSlide = () => {
     setDirection(1)
     setCurrentIndex((prev) => (prev + 1) % reviews.length)
   }
 
-  // Prev: card enters from the left side (negative x), exits to right (positive x)
   const prevSlide = () => {
     setDirection(-1)
     setCurrentIndex((prev) => (prev - 1 + reviews.length) % reviews.length)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return
+    const diff = touchStartX.current - e.changedTouches[0].clientX
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        isRTL ? nextSlide() : prevSlide()
+      } else {
+        isRTL ? prevSlide() : nextSlide()
+      }
+    }
+    touchStartX.current = null
   }
 
   useEffect(() => {
@@ -185,7 +201,10 @@ export default function ReviewsSection() {
         </motion.div>
 
         <div className="relative flex flex-col items-center">
-          <div className="relative w-full h-[600px] sm:h-[500px] flex items-center justify-center overflow-hidden">
+          <div className="relative w-full h-[420px] sm:h-[500px] flex items-center justify-center overflow-hidden"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
             <AnimatePresence mode="popLayout" initial={false} custom={direction}>
               <motion.div
                 key={currentIndex}
@@ -213,25 +232,25 @@ export default function ReviewsSection() {
             </div>
           </div>
 
-          {/* Navigation Buttons */}
+          {/* Navigation Buttons - always visible including mobile */}
           <div
-            className="flex flex-row items-center justify-center gap-10 mt-10"
+            className="flex flex-row items-center justify-center gap-6 sm:gap-10 mt-6"
             dir="ltr"
             style={{ direction: 'ltr' }}
           >
-            {/* LEFT arrow → go to previous card */}
+            {/* LEFT arrow - hidden on mobile */}
             <button
               type="button"
               onClick={isRTL ? prevSlide : nextSlide}
-              className="order-1 w-14 h-14 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center text-white hover:bg-accent hover:text-black transition-all duration-500 shadow-xl group"
+              className="hidden sm:flex w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-white/20 bg-white/10 backdrop-blur-xl items-center justify-center text-white hover:bg-accent hover:text-black hover:border-accent transition-all duration-500 shadow-xl group"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:-translate-x-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:-translate-x-1">
                 <path d="m15 18-6-6 6-6" />
               </svg>
             </button>
 
             {/* Dots */}
-            <div className="order-2 flex gap-3">
+            <div className="flex gap-2">
               {reviews.map((_, i) => (
                 <button
                   key={i}
@@ -242,7 +261,7 @@ export default function ReviewsSection() {
                   }}
                   className={`relative h-2 rounded-full transition-all duration-500 overflow-hidden ${
                     currentIndex === i
-                      ? 'w-12 bg-white/10'
+                      ? 'w-8 bg-white/10'
                       : 'w-2 bg-white/20 hover:bg-white/40'
                   }`}
                 >
@@ -259,13 +278,13 @@ export default function ReviewsSection() {
               ))}
             </div>
 
-            {/* RIGHT arrow → go to next card */}
+            {/* RIGHT arrow - hidden on mobile */}
             <button
               type="button"
               onClick={isRTL ? nextSlide : prevSlide}
-              className="order-3 w-14 h-14 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl flex items-center justify-center text-white hover:bg-accent hover:text-black transition-all duration-500 shadow-xl group"
+              className="hidden sm:flex w-12 h-12 sm:w-14 sm:h-14 rounded-full border border-white/20 bg-white/10 backdrop-blur-xl items-center justify-center text-white hover:bg-accent hover:text-black hover:border-accent transition-all duration-500 shadow-xl group"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-1">
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:translate-x-1">
                 <path d="m9 18 6-6-6-6" />
               </svg>
             </button>
