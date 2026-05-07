@@ -103,21 +103,17 @@ export default function ReviewsSection() {
         </div>
 
         <div className="relative flex overflow-hidden py-6 sm:py-10 mask-fade-edges min-h-[160px] sm:min-h-[300px]">
-          <motion.div 
-            className="flex w-max"
-            animate={{ 
-              x: isRTL ? ["0%", "66.66%"] : ["0%", "-66.66%"] 
-            }}
-            transition={{ 
-              duration: 40, 
-              repeat: Infinity, 
-              ease: "linear" 
+          <div 
+            className="flex w-max marquee-content"
+            style={{ 
+              animation: `marquee 40s linear infinite`,
+              flexDirection: isRTL ? 'row-reverse' : 'row'
             }}
           >
             {duplicatedReviews.map((review, index) => (
               <ReviewCard key={`${review.id}-${index}`} review={review} isRTL={isRTL} />
             ))}
-          </motion.div>
+          </div>
         </div>
       </div>
 
@@ -125,6 +121,17 @@ export default function ReviewsSection() {
         .mask-fade-edges {
           mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
           -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+        }
+        .marquee-content {
+          display: flex;
+          will-change: transform;
+        }
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(${isRTL ? '33.33%' : '-33.33%'}); }
+        }
+        [dir="rtl"] .marquee-content {
+          animation-direction: normal;
         }
       `}} />
     </section>
