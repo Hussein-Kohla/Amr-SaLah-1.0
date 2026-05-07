@@ -28,8 +28,13 @@ export default function BookingPage() {
   const [selectedBarberId, setSelectedBarberId] = useState<Id<'barbers'> | null>(() => {
     return (localStorage.getItem('barberpro_selected_barber_id') as Id<'barbers'>) ?? null
   })
-  const [selectedTime, setSelectedTime] = useState<string | null>(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedTime, setSelectedTime] = useState<string | null>(() => {
+    return localStorage.getItem('barberpro_selected_time') ?? null
+  })
+  const [isModalOpen, setIsModalOpen] = useState(() => {
+    // Re-open modal if we have a saved time on refresh
+    return !!localStorage.getItem('barberpro_selected_time')
+  })
 
   const barbers = useQuery(api.barbers.getBarbers)
   const slots = useQuery(
@@ -37,9 +42,13 @@ export default function BookingPage() {
     selectedBarberId ? { barberId: selectedBarberId, date: selectedDate } : 'skip'
   )
 
-  // T-52: Save to localStorage when state changes
+  // Save to localStorage when state changes
   useEffect(() => {
     localStorage.setItem('barberpro_selected_date', selectedDate)
+    // Update URL without full refresh to stay in sync
+    const params = new URLSearchParams(window.location.search)
+    params.set('date', selectedDate)
+    window.history.replaceState(null, '', `?${params.toString()}`)
   }, [selectedDate])
 
   useEffect(() => {
@@ -47,6 +56,14 @@ export default function BookingPage() {
       localStorage.setItem('barberpro_selected_barber_id', selectedBarberId)
     }
   }, [selectedBarberId])
+
+  useEffect(() => {
+    if (selectedTime) {
+      localStorage.setItem('barberpro_selected_time', selectedTime)
+    } else {
+      localStorage.removeItem('barberpro_selected_time')
+    }
+  }, [selectedTime])
 
   useEffect(() => {
     if (barbers && barbers.length > 0) {
@@ -58,9 +75,18 @@ export default function BookingPage() {
     }
   }, [barbers, selectedBarberId])
 
-  const handleDateChange = (date: string) => { setSelectedDate(date); setSelectedTime(null) }
-  const handleBarberChange = (id: string) => { setSelectedBarberId(id as Id<'barbers'>); setSelectedTime(null) }
-  const handleSlotClick = (time: string) => { setSelectedTime(time); setIsModalOpen(true) }
+  const handleDateChange = (date: string) => { 
+    setSelectedDate(date)
+    setSelectedTime(null) 
+  }
+  const handleBarberChange = (id: string) => { 
+    setSelectedBarberId(id as Id<'barbers'>)
+    setSelectedTime(null) 
+  }
+  const handleSlotClick = (time: string) => { 
+    setSelectedTime(time)
+    setIsModalOpen(true) 
+  }
 
   const selectedBarber = barbers?.find((b: { _id: string }) => b._id === selectedBarberId)
 
@@ -88,7 +114,7 @@ export default function BookingPage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <span className="text-sm">{isRTL ? '🇬🇧' : '🇸🇦'}</span>
+              <span className="text-sm">{isRTL ? '🇬🇧' : '🇪🇬'}</span>
               <span className={isRTL ? 'font-english uppercase' : 'font-arabic'}>
                 {isRTL ? 'EN' : 'العربية'}
               </span>

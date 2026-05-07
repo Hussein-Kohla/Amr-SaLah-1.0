@@ -403,7 +403,7 @@ export default function AdminPage() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
-              <span className="text-sm">{isRTL ? '🇬🇧' : '🇸🇦'}</span>
+              <span className="text-sm">{isRTL ? '🇬🇧' : '🇪🇬'}</span>
               <span className={isRTL ? 'font-english uppercase' : 'font-arabic'}>
                 {isRTL ? 'EN' : 'العربية'}
               </span>
@@ -510,15 +510,19 @@ export default function AdminPage() {
               </div>
 
               <div className="flex gap-6 items-start flex-col lg:flex-row">
-                {/* ── Calendar ── */}
-                <div className="lg:sticky lg:top-6 space-y-6 z-50 relative">
-                  <MiniCalendar dates={allDates} selected={selectedDate} onSelect={setSelectedDate} isRTL={isRTL} />
-                  <AdminScheduleManager 
-                    selectedDate={selectedDate} 
-                    onDateChange={setSelectedDate}
-                    isRTL={isRTL} 
-                    onSnack={(type, title, msg) => addSnack(type, title, msg)} 
-                  />
+                {/* ── Calendar & Schedule Guard ── */}
+                <div className="grid grid-cols-2 lg:flex lg:flex-col lg:sticky lg:top-6 gap-4 sm:gap-6 z-50 relative w-full lg:w-64">
+                  <div className="w-full">
+                    <MiniCalendar dates={allDates} selected={selectedDate} onSelect={setSelectedDate} isRTL={isRTL} />
+                  </div>
+                  <div className="w-full">
+                    <AdminScheduleManager 
+                      selectedDate={selectedDate} 
+                      onDateChange={setSelectedDate}
+                      isRTL={isRTL} 
+                      onSnack={(type, title, msg) => addSnack(type, title, msg)} 
+                    />
+                  </div>
                 </div>
 
                 {/* ── Cards Grid ── */}

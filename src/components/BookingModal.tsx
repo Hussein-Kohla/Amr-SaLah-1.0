@@ -57,7 +57,7 @@ function validate(data: FormData, t: TFunction): FormErrors {
 
 function formatDate(dateStr: string, isRTL: boolean): string {
   const d = new Date(dateStr)
-  return d.toLocaleDateString(isRTL ? 'ar-SA' : 'en-US', {
+  return d.toLocaleDateString(isRTL ? 'ar-EG' : 'en-US', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
