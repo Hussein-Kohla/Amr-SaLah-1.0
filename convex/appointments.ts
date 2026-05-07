@@ -84,13 +84,16 @@ export const getSlots = query({
           ? existingStatus as any
           : "available";
 
-      // T-Fix: Block past slots if date is today
-      if (status === "available" && date === new Date().toISOString().split('T')[0]) {
-        const now = new Date();
-        const slotTime = new Date();
-        const [h, m] = [actualHours, mins];
-        slotTime.setHours(h, m, 0, 0);
-        if (slotTime < now) {
+      // T-Fix: Block past slots if date is today (Assume Egypt Time UTC+3)
+      const nowEgypt = new Date(Date.now() + 3 * 60 * 60 * 1000);
+      const todayEgypt = nowEgypt.toISOString().split('T')[0];
+      
+      if (status === "available" && date === todayEgypt) {
+        const slotTime = new Date(date);
+        slotTime.setHours(actualHours, mins, 0, 0);
+        // T-Fix: Allow booking the current hour slot until the next hour begins
+        const slotEndTime = slotTime.getTime() + 60 * 60 * 1000;
+        if (nowEgypt.getTime() >= slotEndTime) {
           status = "blocked";
         }
       }

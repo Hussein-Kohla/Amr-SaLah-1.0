@@ -42,8 +42,8 @@ export function usePWA() {
       );
     } else if (isAndroid) {
       alert(isRTL
-        ? 'على أجهزة أندرويد: اضغط على القائمة (3 نقاط) ثم اختر "تثبيت التطبيق" أو "إضافة إلى الشاشة الرئيسية"'
-        : 'On Android: Tap the menu (3 dots) and select "Install app" or "Add to Home screen"'
+        ? 'على أجهزة أندرويد: اضغط على القائمة (⋮) ثم اختر "تثبيت التطبيق" أو "إضافة إلى الشاشة الرئيسية"'
+        : 'On Android: Tap the menu (⋮) and select "Install app" or "Add to Home screen"'
       );
     } else if (isStandalone) {
       alert(isRTL ? 'التطبيق مثبت بالفعل' : 'App already installed');

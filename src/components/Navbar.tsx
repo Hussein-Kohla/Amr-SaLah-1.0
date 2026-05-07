@@ -1,12 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { motion, useScroll, useTransform } from 'framer-motion'
 import { useState, useEffect } from 'react'
-import { usePWA } from '../hooks/usePWA'
 
 export default function Navbar() {
   const { t, i18n } = useTranslation()
   const isRTL = i18n.language === 'ar'
-  const { installPWA, isStandalone } = usePWA()
   const [scrolled, setScrolled] = useState(false)
   const { scrollY } = useScroll()
 
@@ -49,25 +47,6 @@ export default function Navbar() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* PWA Install Button (only if not standalone) */}
-          {!isStandalone && (
-            <motion.button
-              onClick={() => installPWA(isRTL)}
-              className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full border border-white/20
-                         text-white text-xs font-medium hover:border-white/40 hover:bg-white/5
-                         transition-all duration-200 cursor-pointer whitespace-nowrap"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-            >
-              <span>📱</span>
-              <span className={isRTL ? 'font-arabic' : 'font-english'}>
-                {isRTL ? 'تطبيق الهاتف' : 'Phone App'}
-              </span>
-            </motion.button>
-          )}
 
           {/* Language toggle */}
           <motion.button

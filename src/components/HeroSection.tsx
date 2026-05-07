@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next'
 import { motion, useScroll, useTransform, type Variants } from 'framer-motion'
 import { useRef } from 'react'
 import BookNowButton from './BookNowButton'
+import { usePWA } from '../hooks/usePWA'
 
 const containerVariants: Variants = {
   hidden: {},
@@ -26,6 +27,7 @@ const lineVariant: Variants = {
 export default function HeroSection() {
   const { t, i18n } = useTranslation()
   const isRTL = i18n.language === 'ar'
+  const { installPWA, isStandalone } = usePWA()
   const heroRef = useRef<HTMLElement>(null)
 
   const { scrollYProgress } = useScroll({ target: heroRef, offset: ['start start', 'end start'] })
@@ -78,8 +80,22 @@ export default function HeroSection() {
             {t('hero.subtitle')}
           </motion.p>
 
-          <motion.div variants={fadeUpVariant}>
+          <motion.div variants={fadeUpVariant} className="flex flex-col items-center gap-4">
             <BookNowButton size="large" />
+            
+            {!isStandalone && (
+              <motion.button
+                onClick={() => installPWA(isRTL)}
+                className="flex items-center gap-2 px-6 py-2.5 rounded-full border border-accent/30 bg-accent/5
+                           text-accent text-sm font-bold hover:bg-accent/10 transition-all duration-300 cursor-pointer shadow-lg"
+                whileTap={{ scale: 0.95 }}
+              >
+                <span>📱</span>
+                <span className={isRTL ? 'font-arabic' : 'font-english'}>
+                  {isRTL ? 'إضافة لتطبيقات الهاتف' : 'Add to phone apps'}
+                </span>
+              </motion.button>
+            )}
           </motion.div>
 
           <motion.div
