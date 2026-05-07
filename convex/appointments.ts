@@ -159,6 +159,24 @@ export const createAppointment = mutation({
       throw new Error("SLOT_TAKEN");
     }
 
+    // Check if customer is blocked by email or phone
+    const emailToCheck = args.customerEmail?.trim().toLowerCase();
+    const phoneToCheck = args.customerPhone.replace(/\s/g, '');
+
+    const isBlocked = await ctx.db
+      .query("userBlacklist")
+      .filter((q) => 
+        q.or(
+          q.eq(q.field("value"), emailToCheck),
+          q.eq(q.field("value"), phoneToCheck)
+        )
+      )
+      .first();
+
+    if (isBlocked) {
+      throw new Error("USER_BLOCKED");
+    }
+
     const id = await ctx.db.insert("appointments", {
       barberId: args.barberId,
       date: args.date,

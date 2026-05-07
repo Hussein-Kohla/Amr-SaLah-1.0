@@ -71,4 +71,11 @@ export default defineSchema({
     subscription: v.any(), // JSON string or object from PushSubscription
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  userBlacklist: defineTable({
+    type: v.union(v.literal("email"), v.literal("phone")),
+    value: v.string(), // email or phone
+    reason: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_value", ["value"]),
 });

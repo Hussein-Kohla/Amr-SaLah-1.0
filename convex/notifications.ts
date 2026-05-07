@@ -25,6 +25,8 @@ export const saveAndScheduleReminder = mutation({
     scheduledTime: v.number(),
     title: v.string(),
     body: v.string(),
+    email: v.optional(v.string()),
+    customerName: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await ctx.db.insert("pushSubscriptions", {
@@ -33,9 +35,11 @@ export const saveAndScheduleReminder = mutation({
       createdAt: Date.now(),
     });
 
-    // Schedule the push from the new push.ts file
-    await ctx.scheduler.runAt(args.scheduledTime, api.push.sendPushNotification, {
+    // Schedule the unified reminder (Push + Email)
+    await ctx.scheduler.runAt(args.scheduledTime, api.reminders.sendReminder, {
       subscription: args.subscription,
+      email: args.email,
+      customerName: args.customerName,
       title: args.title,
       body: args.body,
     });

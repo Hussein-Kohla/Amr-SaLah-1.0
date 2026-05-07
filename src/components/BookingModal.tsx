@@ -160,7 +160,10 @@ export default function BookingModal({
           let sub = await reg.pushManager.getSubscription();
           if (sub) {
             await sub.unsubscribe();
+            // Small delay to let browser process unsubscription
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
+          
           sub = await reg.pushManager.subscribe({
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
@@ -190,6 +193,8 @@ export default function BookingModal({
                 scheduledTime: reminderTime,
                 title: isRTL ? '⏰ تذكير بموعدك' : '⏰ Appointment Reminder',
                 body: isRTL ? 'باقي 15 دقيقة على موعد حلاقتك.' : '15 minutes left until your appointment.',
+                email: form.email.trim().toLowerCase(),
+                customerName: form.name.trim(),
               });
             }
           }
@@ -320,6 +325,11 @@ export default function BookingModal({
       if (msg.includes('EXPIRED_OTP') || msg.includes('INVALID_OTP')) {
         setErrors({ otp: t('modal.otpInvalid') })
         setModalState('otp')
+      } else if (msg.includes('USER_BLOCKED')) {
+        setServerError(isRTL 
+          ? 'تم حظرك من الموقع. يرجى التواصل مع الإدارة عبر الواتساب: 01000823374' 
+          : 'You have been blocked from this site. Please contact admin via WhatsApp: 01000823374')
+        setModalState('error')
       } else {
         setServerError(msg.includes('SLOT_TAKEN') ? t('modal.slotTaken') : t('modal.genericError'))
         setModalState('error')

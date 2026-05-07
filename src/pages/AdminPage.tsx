@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import type { Id } from '../../convex/_generated/dataModel'
 import AdminScheduleManager from '../components/AdminScheduleManager'
+import AdminBlacklistManager from '../components/AdminBlacklistManager'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type SnackType = 'success' | 'error'
@@ -206,7 +207,7 @@ export default function AdminPage() {
     return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`
   })
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null)
-  const [activeTab, setActiveTab] = useState<'all' | 'confirmed' | 'booked'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'confirmed' | 'booked' | 'blacklist'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'phone' | 'email' | 'age' | 'barber' | ''>('')
 
@@ -507,6 +508,12 @@ export default function AdminPage() {
                 >
                   {isRTL ? 'الانتظار' : 'Waiting'}
                 </button>
+                <button
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'blacklist' ? 'bg-gradient-to-br from-[#ef4444] to-[#f87171] text-white shadow-lg shadow-red-500/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                  onClick={() => setActiveTab('blacklist')}
+                >
+                  {isRTL ? 'الحظر' : 'Blacklist'}
+                </button>
               </div>
 
               <div className="flex gap-6 items-start flex-col lg:flex-row">
@@ -525,8 +532,14 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* ── Cards Grid ── */}
-                <div className="flex-1 space-y-6 min-w-0 w-full z-10 relative">
+                {/* ── Blacklist Tab Content ── */}
+                {activeTab === 'blacklist' ? (
+                  <div className="flex-1 w-full z-10 relative">
+                    <AdminBlacklistManager isRTL={isRTL} onSnack={addSnack} />
+                  </div>
+                ) : (
+                  /* ── Cards Grid ── */
+                  <div className="flex-1 space-y-6 min-w-0 w-full z-10 relative">
                   {sortedDates.length === 0 ? (
                     <div className="w-full text-center py-20 bg-white/5 rounded-2xl border border-white/5 flex flex-col items-center gap-3">
                       <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-2xl opacity-40">✂️</div>
@@ -604,7 +617,8 @@ export default function AdminPage() {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                )}
               </div>
             </>
           )}
