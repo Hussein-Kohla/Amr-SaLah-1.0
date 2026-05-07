@@ -134,12 +134,20 @@ export default function BookingModal({
   const sendTestPush = useAction(api.push.sendPushNotification);
 
   const requestNotificationPermission = async () => {
-    if (!('Notification' in window)) return
+    if (!('Notification' in window)) {
+      alert(isRTL ? 'متصفحك لا يدعم الإشعارات' : 'Your browser does not support notifications');
+      return;
+    }
     
+    // Check if already denied
+    if (Notification.permission === 'denied') {
+      alert(isRTL ? 'الإشعارات محظورة في متصفحك. يرجى تفعيلها من إعدادات الموقع.' : 'Notifications are blocked. Please enable them in your browser settings.');
+      return;
+    }
+
     const permission = await Notification.requestPermission()
     if (permission === 'granted') {
       setWantsReminder(true)
-      
       const minutesLeft = getMinutesLeft()
 
       // --- PUSH NOTIFICATION SETUP ---
@@ -148,20 +156,29 @@ export default function BookingModal({
           const reg = await navigator.serviceWorker.ready;
           const VAPID_PUBLIC_KEY = "BB4UntPs40JhTTaJoTi5f-MYKLNxwg7MRKVPW2OgYBKpEeWlSXTFp5NAc1qE75EMo74RLLYJmZR-vvxImZa57-c";
           
+          // FORCE REFRESH: Unsubscribe old and subscribe new to ensure VAPID keys match
           let sub = await reg.pushManager.getSubscription();
-          if (!sub) {
-            sub = await reg.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-            });
+          if (sub) {
+            await sub.unsubscribe();
           }
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          });
 
           // Send a test notification immediately to confirm it works
-          await sendTestPush({
-            subscription: sub,
+          const result = await sendTestPush({
+            subscription: JSON.parse(JSON.stringify(sub)), // Convert to plain object
             title: isRTL ? '✅ صالون عمرو صلاح' : '✅ Amr Salah Salon',
             body: isRTL ? 'الإشعارات تعمل بنجاح! سنقوم بتذكيرك قبل موعدك.' : 'Notifications are working! We will remind you before your appointment.',
+            url: window.location.origin
           });
+
+          if (result.success) {
+            alert(isRTL ? 'تم تفعيل الإشعارات بنجاح! ستصلك رسالة تجريبية الآن.' : 'Notifications enabled! You should receive a test message now.');
+          } else {
+            alert(isRTL ? 'فشل إرسال الإشعار التجريبي: ' + result.error : 'Test notification failed: ' + result.error);
+          }
 
           // Schedule 15-min reminder on the server if appointment exists
           if (lastAppointmentId && minutesLeft !== null) {
@@ -169,7 +186,7 @@ export default function BookingModal({
             if (reminderTime > Date.now()) {
               await saveAndSchedulePush({
                 appointmentId: lastAppointmentId,
-                subscription: sub,
+                subscription: JSON.parse(JSON.stringify(sub)), // Convert to plain object
                 scheduledTime: reminderTime,
                 title: isRTL ? '⏰ تذكير بموعدك' : '⏰ Appointment Reminder',
                 body: isRTL ? 'باقي 15 دقيقة على موعد حلاقتك.' : '15 minutes left until your appointment.',
@@ -178,10 +195,13 @@ export default function BookingModal({
           }
         } catch (err) {
           console.error("Push subscription failed", err);
-          new Notification(title, { body, icon: '/favicon.svg' });
+          alert(isRTL ? 'حدث خطأ أثناء تفعيل الإشعارات: ' + String(err) : 'Error enabling notifications: ' + String(err));
         }
       } else {
-        new Notification(title, { body, icon: '/favicon.svg' })
+        // Fallback for browsers with Notification but no Push
+        const title = isRTL ? '✅ تم التفعيل' : '✅ Enabled';
+        const body = isRTL ? 'سيتم تنبيهك في هذا المتصفح.' : 'You will be notified in this browser.';
+        new Notification(title, { body, icon: '/favicon.svg' });
       }
     } else {
       setWantsReminder(false)
