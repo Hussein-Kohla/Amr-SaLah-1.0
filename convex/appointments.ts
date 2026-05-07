@@ -78,13 +78,26 @@ export const getSlots = query({
       const existingStatus = bookedMap.get(time);
       const isBlocked = isDayBlocked || blockedSlots.has(time);
 
+      let status: "available" | "booked" | "blocked" | "confirmed" | "pending" | "outside" = isBlocked 
+        ? "blocked"
+        : (existingStatus === "booked" || existingStatus === "blocked" || existingStatus === "confirmed" || existingStatus === "pending")
+          ? existingStatus as any
+          : "available";
+
+      // T-Fix: Block past slots if date is today
+      if (status === "available" && date === new Date().toISOString().split('T')[0]) {
+        const now = new Date();
+        const slotTime = new Date();
+        const [h, m] = [actualHours, mins];
+        slotTime.setHours(h, m, 0, 0);
+        if (slotTime < now) {
+          status = "blocked";
+        }
+      }
+
       slots.push({
         time,
-        status: isBlocked 
-          ? "blocked"
-          : (existingStatus === "booked" || existingStatus === "blocked" || existingStatus === "confirmed" || existingStatus === "pending")
-            ? existingStatus as any
-            : "available",
+        status,
       });
 
       current += 60; // 60-minute slots

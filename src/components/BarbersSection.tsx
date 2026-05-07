@@ -169,8 +169,9 @@ export default function BarbersSection() {
         {!isStandalone && (
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
-            animate={isTitleInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-            transition={{ duration: 0.5, delay: 0.8 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: '-20px' }}
+            transition={{ duration: 0.5, delay: 0.2 }}
             className="flex justify-center"
           >
             <button
