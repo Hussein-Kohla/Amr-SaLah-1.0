@@ -97,13 +97,90 @@ export default function BookingModal({
   const drawerRef = useRef<HTMLDivElement>(null)
   const firstInputRef = useRef<HTMLInputElement>(null)
 
+  const [lastAppointmentId, setLastAppointmentId] = useState<Id<'appointments'> | null>(null)
+
+  const getMinutesLeft = () => {
+    try {
+      if (timeSlot.startsWith('Waiting')) return null
+      const timeMatch = timeSlot.match(/(\d+):(\d+)\s*(AM|PM)?/i)
+      if (!timeMatch) return null
+      let hours = parseInt(timeMatch[1])
+      const mins = parseInt(timeMatch[2])
+      const period = timeMatch[3]?.toUpperCase()
+      if (period === 'PM' && hours !== 12) hours += 12
+      if (period === 'AM' && hours === 12) hours = 0
+      const target = new Date(date)
+      target.setHours(hours, mins, 0, 0)
+      const now = new Date()
+      return Math.floor((target.getTime() - now.getTime()) / 60000)
+    } catch (e) {
+      return null
+    }
+  }
+
+  const saveAndSchedulePush = useMutation(api.notifications.saveAndScheduleReminder)
+
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) return
+    
     const permission = await Notification.requestPermission()
-    if (permission !== 'granted') {
-      setWantsReminder(false)
-    } else {
+    if (permission === 'granted') {
       setWantsReminder(true)
+      
+      const minutesLeft = getMinutesLeft()
+      const title = isRTL ? 'تم تفعيل التنبيهات' : 'Notifications Enabled'
+      const body = minutesLeft === null
+        ? (isRTL ? 'سنقوم بتنبيهك فور توفر موعد' : 'We will notify you when a slot is available')
+        : (isRTL ? `فاضل ${Math.max(0, minutesLeft)} دقيقة على حجزك` : `${Math.max(0, minutesLeft)} minutes left for your booking`)
+
+      // --- PUSH NOTIFICATION SETUP ---
+      if ('serviceWorker' in navigator && 'PushManager' in window) {
+        try {
+          const reg = await navigator.serviceWorker.ready;
+          const VAPID_PUBLIC_KEY = "BOuRW7k0MYPtbLHvgvrmStKvgN1znLHRr01XFKaYTRmT-C2ED6Nm_lcW-4lx2QTT_zhJ1zYDuDcmE8BvruTSbL0";
+          
+          let sub = await reg.pushManager.getSubscription();
+          if (!sub) {
+            sub = await reg.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: VAPID_PUBLIC_KEY
+            });
+          }
+
+          // Schedule 15-min reminder on the server if appointment exists
+          if (lastAppointmentId && minutesLeft !== null && minutesLeft > 15) {
+            const timeMatch = timeSlot.match(/(\d+):(\d+)\s*(AM|PM)?/i)
+            if (timeMatch) {
+              let hours = parseInt(timeMatch[1])
+              const mins = parseInt(timeMatch[2])
+              const period = timeMatch[3]?.toUpperCase()
+              if (period === 'PM' && hours !== 12) hours += 12
+              if (period === 'AM' && hours === 12) hours = 0
+              const target = new Date(date)
+              target.setHours(hours, mins, 0, 0)
+              
+              const scheduledTime = target.getTime() - (15 * 60 * 1000);
+              
+              await saveAndSchedulePush({
+                appointmentId: lastAppointmentId,
+                subscription: sub,
+                scheduledTime,
+                title: isRTL ? 'تذكير بالموعد' : 'Appointment Reminder',
+                body: isRTL ? 'باقي 15 دقيقة على موعد حجزك' : '15 minutes left for your appointment',
+              });
+            }
+          }
+
+          reg.showNotification(title, { body, icon: '/favicon.svg' });
+        } catch (err) {
+          console.error("Push subscription failed", err);
+          new Notification(title, { body, icon: '/favicon.svg' });
+        }
+      } else {
+        new Notification(title, { body, icon: '/favicon.svg' })
+      }
+    } else {
+      setWantsReminder(false)
     }
   }
 
@@ -116,6 +193,27 @@ export default function BookingModal({
     const { otp, ...dataToSave } = form
     localStorage.setItem('barberpro_booking_form', JSON.stringify(dataToSave))
   }, [form])
+
+  // T-Automatic Reminder 15 mins before
+  useEffect(() => {
+    if (modalState === 'success' && wantsReminder && Notification.permission === 'granted') {
+      const minutesLeft = getMinutesLeft()
+      if (minutesLeft !== null && minutesLeft > 15) {
+        const delayMs = (minutesLeft - 15) * 60 * 1000
+        const timer = setTimeout(() => {
+          const title = isRTL ? 'تذكير بالموعد' : 'Appointment Reminder'
+          const body = isRTL ? 'باقي 15 دقيقة على موعد حجزك' : '15 minutes left for your appointment'
+          if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(reg => reg.showNotification(title, { body, icon: '/favicon.svg' }))
+          } else {
+            new Notification(title, { body, icon: '/favicon.svg' })
+          }
+        }, delayMs)
+        return () => clearTimeout(timer)
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalState, wantsReminder, date, timeSlot])
 
   // T-51: Escape key closes modal
   useEffect(() => {
@@ -178,7 +276,7 @@ export default function BookingModal({
         code: form.otp,
         phone: form.phone.replace(/\s/g, ''),
       })
-      await createAppointment({
+      const id = await createAppointment({
         barberId,
         date,
         timeSlot,
@@ -189,6 +287,7 @@ export default function BookingModal({
         userId: userId ?? undefined,
         wantsReminder,
       })
+      setLastAppointmentId(id)
       setModalState('success')
       localStorage.removeItem('barberpro_booking_form')
       onConfirmed()
@@ -309,16 +408,16 @@ export default function BookingModal({
                     ))}
                   </div>
 
-                  {/* Success Banner Info Cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 w-full">
+                  {/* Two restored squares */}
+                  <div className="grid grid-cols-2 gap-3 mb-4 w-full">
                     <motion.div
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.3 }}
-                      className="flex flex-col items-center justify-center gap-1.5 text-accent/90 bg-accent/10 py-3 px-3 rounded-xl border border-accent/20 shadow-sm text-center"
+                      className="flex flex-col items-center justify-center gap-2 text-orange-400 bg-orange-500/10 py-4 px-3 rounded-2xl border border-orange-500/20 shadow-sm text-center"
                     >
-                      <span className="text-xl animate-pulse">📸</span>
-                      <span className={`text-[10px] font-medium leading-relaxed ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                      <span className="text-2xl animate-pulse">📸</span>
+                      <span className={`text-[10px] font-bold leading-tight ${isRTL ? 'font-arabic' : 'font-english'}`}>
                         {isRTL ? 'يُرجى أخذ لقطة شاشة (Screenshot) للتأكيد' : 'Take a screenshot to confirm'}
                       </span>
                     </motion.div>
@@ -327,30 +426,34 @@ export default function BookingModal({
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.4 }}
-                      className="flex flex-col items-center justify-center gap-1.5 text-blue-400 bg-blue-500/10 py-3 px-3 rounded-xl border border-blue-500/20 shadow-sm text-center"
+                      className="flex flex-col items-center justify-center gap-2 text-blue-400 bg-blue-500/10 py-4 px-3 rounded-2xl border border-blue-500/20 shadow-sm text-center"
                     >
-                      <span className="text-xl">⏰</span>
-                      <span className={`text-[10px] font-medium leading-relaxed ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                      <span className="text-2xl">⏰</span>
+                      <span className={`text-[10px] font-bold leading-tight ${isRTL ? 'font-arabic' : 'font-english'}`}>
                         {isRTL ? 'يُرجى الحضور قبل الموعد بـ 10 دقائق' : 'Please arrive 10 mins early'}
                       </span>
                     </motion.div>
+                  </div>
 
-                    <motion.button
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.5 }}
-                      onClick={requestNotificationPermission}
-                      className="flex flex-col items-center justify-center gap-1.5 py-3 px-3 rounded-xl border transition-all duration-300 text-center cursor-pointer text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-sm"
-                    >
-                      <span className="text-xl">🔔</span>
-                      <span className={`text-[10px] font-bold leading-relaxed ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                  {/* Notification Card matching user image */}
+                  <motion.button
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5 }}
+                    onClick={requestNotificationPermission}
+                    className="w-full flex flex-col items-center justify-center gap-3 py-8 px-5 rounded-[2rem] border border-emerald-500/20 bg-[#111122]/50 backdrop-blur-md transition-all duration-300 group hover:bg-emerald-500/5 mb-6 shadow-2xl relative overflow-hidden"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-b from-emerald-500/5 to-transparent pointer-events-none" />
+                    <span className="text-4xl filter drop-shadow-[0_0_15px_rgba(234,179,8,0.6)] mb-1">🔔</span>
+                    <div className="flex flex-col gap-1.5 items-center relative z-10">
+                      <span className={`text-emerald-400 text-lg font-bold leading-tight ${isRTL ? 'font-arabic' : 'font-english'}`}>
                         {isRTL ? 'سيتم إرسال إشعار قبل الموعد بـ 15 دقيقة' : 'Notification will be sent 15m before'}
                       </span>
-                      <span className={`text-[9px] font-medium opacity-80 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                      <span className={`text-emerald-400/90 text-sm font-semibold underline underline-offset-4 decoration-emerald-500/40 group-hover:decoration-emerald-400 transition-all ${isRTL ? 'font-arabic' : 'font-english'}`}>
                         {isRTL ? 'اضغط لإعطاء الإذن' : 'Click to grant permission'}
                       </span>
-                    </motion.button>
-                  </div>
+                    </div>
+                  </motion.button>
 
                   <button
                     onClick={handleClose}

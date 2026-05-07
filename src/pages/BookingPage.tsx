@@ -10,10 +10,12 @@ import DateStrip from '../components/DateStrip'
 import BarberSelector from '../components/BarberSelector'
 import SlotGrid from '../components/SlotGrid'
 import BookingModal from '../components/BookingModal'
+import { usePWA } from '../hooks/usePWA'
 
 export default function BookingPage() {
   const { t, i18n } = useTranslation()
   const isRTL = i18n.language === 'ar'
+  const { installPWA, isStandalone } = usePWA()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
@@ -105,20 +107,39 @@ export default function BookingPage() {
               {t('common.back')}
             </button>
 
-            {/* Language toggle (Matches Navbar style) */}
-            <motion.button
-              onClick={() => i18n.changeLanguage(isRTL ? 'en' : 'ar')}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/40
-                         text-accent text-xs font-medium hover:border-accent hover:bg-accent/10
-                         transition-all duration-200 cursor-pointer"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span className="text-sm">{isRTL ? '🇬🇧' : '🇪🇬'}</span>
-              <span className={isRTL ? 'font-english uppercase' : 'font-arabic'}>
-                {isRTL ? 'EN' : 'العربية'}
-              </span>
-            </motion.button>
+            <div className="flex items-center gap-2">
+              {/* PWA Install Button */}
+              {!isStandalone && (
+                <motion.button
+                  onClick={() => installPWA(isRTL)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-white/10
+                             text-white/60 text-xs font-medium hover:text-white hover:bg-white/5
+                             transition-all duration-200 cursor-pointer"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <span>📱</span>
+                  <span className={isRTL ? 'font-arabic' : 'font-english'}>
+                    {isRTL ? 'إضافة' : 'Add App'}
+                  </span>
+                </motion.button>
+              )}
+
+              {/* Language toggle (Matches Navbar style) */}
+              <motion.button
+                onClick={() => i18n.changeLanguage(isRTL ? 'en' : 'ar')}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/40
+                           text-accent text-xs font-medium hover:border-accent hover:bg-accent/10
+                           transition-all duration-200 cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span className="text-sm">{isRTL ? '🇬🇧' : '🇪🇬'}</span>
+                <span className={isRTL ? 'font-english uppercase' : 'font-arabic'}>
+                  {isRTL ? 'EN' : 'العربية'}
+                </span>
+              </motion.button>
+            </div>
           </div>
           <h1 className={`text-3xl font-bold text-white mb-1 ${isRTL ? 'font-arabic' : 'font-english'}`}>
             {t('booking.pageTitle')}

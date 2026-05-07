@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { motion, useInView, type Variants } from 'framer-motion'
 import { useRef } from 'react'
 import type { Doc } from '../../convex/_generated/dataModel'
+import { usePWA } from '../hooks/usePWA'
 
 const titleVariants: Variants = {
   hidden: { opacity: 0, y: 30 },
@@ -132,6 +133,7 @@ export default function BarbersSection() {
   const isTitleInView = useInView(titleRef, { once: true, margin: '-60px' })
   const barbersQuery = useQuery(api.barbers.getBarbers)
   const barbers = barbersQuery || fallbackBarbers;
+  const { installPWA, isStandalone } = usePWA()
 
   return (
     <section id="team" className="py-24 px-4 bg-gradient-to-b from-primary via-[#1a1a2e] to-[#13131f] relative overflow-hidden"
@@ -157,11 +159,36 @@ export default function BarbersSection() {
           <div className="h-[2px] bg-gradient-to-r from-transparent via-accent to-transparent w-24 mx-auto" />
         </motion.div>
 
-        <div className="flex flex-wrap justify-center gap-16">
+        <div className="flex flex-wrap justify-center gap-16 mb-16">
           {barbers.map((barber: any, index: number) => (
             <BarberCard key={barber._id} barber={barber} index={index} />
           ))}
         </div>
+
+        {/* PWA Install Button (Centred at the bottom) */}
+        {!isStandalone && (
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={isTitleInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
+            transition={{ duration: 0.5, delay: 0.8 }}
+            className="flex justify-center"
+          >
+            <button
+              onClick={() => installPWA(isRTL)}
+              className="flex items-center gap-3 px-8 py-3.5 rounded-2xl border border-accent/30 bg-accent/5 hover:bg-accent/10 transition-all duration-300 group cursor-pointer"
+            >
+              <span className="text-2xl group-hover:scale-110 transition-transform">📱</span>
+              <div className="flex flex-col items-start">
+                <span className={`text-white font-bold leading-tight ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                  {isRTL ? 'إضافة لتطبيقات الهاتف' : 'Add to phone apps'}
+                </span>
+                <span className={`text-accent/60 text-xs ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                  {isRTL ? 'لسهولة الحجز والمتابعة' : 'For easier booking'}
+                </span>
+              </div>
+            </button>
+          </motion.div>
+        )}
       </div>
     </section>
   )

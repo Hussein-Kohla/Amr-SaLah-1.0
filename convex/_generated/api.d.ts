@@ -13,6 +13,8 @@ import type * as appointments from "../appointments.js";
 import type * as auth from "../auth.js";
 import type * as barbers from "../barbers.js";
 import type * as blocks from "../blocks.js";
+import type * as notifications from "../notifications.js";
+import type * as push from "../push.js";
 import type * as seed from "../seed.js";
 
 import type {
@@ -27,6 +29,8 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   barbers: typeof barbers;
   blocks: typeof blocks;
+  notifications: typeof notifications;
+  push: typeof push;
   seed: typeof seed;
 }>;
 

@@ -64,4 +64,11 @@ export default defineSchema({
   })
     .index("by_barber_date", ["barberId", "date"])
     .index("by_date", ["date"]),
+
+  pushSubscriptions: defineTable({
+    userId: v.optional(v.id("users")),
+    appointmentId: v.optional(v.id("appointments")),
+    subscription: v.any(), // JSON string or object from PushSubscription
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 });
