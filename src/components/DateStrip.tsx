@@ -20,7 +20,7 @@ function getNext7Days(lang: string) {
     const locale = isAR ? 'ar-EG-u-nu-latn' : 'en-US'
     
     days.push({
-      dateStr: d.toISOString().split('T')[0],
+      dateStr: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
       dayName: d.toLocaleDateString(locale, { weekday: 'short' }),
       dayNum: d.getDate(),
       monthName: d.toLocaleDateString(locale, { month: 'short' }),

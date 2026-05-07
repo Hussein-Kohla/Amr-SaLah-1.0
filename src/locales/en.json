@@ -37,10 +37,12 @@
       "sectionLabel": "Our Work",
       "sectionTitle": "Gallery",
       "captions": {
-        "cut": "Professional Cut",
-        "interior": "Luxury Ambiance",
-        "tools": "Craft Tools",
-        "look": "Perfect Look"
+        "gal1": "Precision fades. Clean transitions. Confidence in every cut.",
+        "gal2": "Crafted fades, defined style.",
+        "gal3": "Where detail meets perfection.",
+        "gal4": "Sharp looks start with sharp fades.",
+        "gal5": "Barbering is not a job, it’s an art.",
+        "gal6": "Elevating your everyday style."
       }
     },
     "location": {
@@ -61,9 +63,10 @@
       "city": "Beni Suef, Egypt",
       "rights": "All rights reserved",
       "links": {
-        "services": "Services",
-        "team": "Team",
         "gallery": "Gallery",
+        "reviews": "Reviews",
+        "team": "Team",
+        "services": "Services",
         "location": "Location"
       }
     },
@@ -97,7 +100,18 @@
       "nameMin": "Name must be at least 2 characters",
       "nameMax": "Name is too long",
       "ageRange": "Age must be between 5 and 99",
-      "phoneInvalid": "Invalid phone number (e.g. 0501234567)",
+      "phoneInvalid": "Invalid phone number (must be 11 digits, starting with 010, 011, 012, or 015)",
+      "emailLabel": "Email Address",
+      "emailPlaceholder": "e.g. example@gmail.com",
+      "emailInvalid": "Email must be a valid @gmail.com address",
+      "otpTitle": "Verification Code",
+      "otpSubtitle": "We sent a 6-digit code to your email",
+      "otpLabel": "Enter Code",
+      "otpPlaceholder": "123456",
+      "otpInvalid": "Invalid 6-digit code",
+      "otpVerifyBtn": "Verify & Book",
+      "otpVerifyingBtn": "Verifying...",
+      "successWarning": "Please note that in case of no-show or delay, you will be permanently blocked. If you want to cancel your booking, please contact us via WhatsApp:",
       "slotTaken": "Sorry, this slot was just booked. Please choose another time.",
       "genericError": "Something went wrong. Please try again."
     }

@@ -17,9 +17,17 @@ export default function BookingPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  const todayStr = new Date().toISOString().split('T')[0]
-  const [selectedDate, setSelectedDate] = useState(searchParams.get('date') ?? todayStr)
-  const [selectedBarberId, setSelectedBarberId] = useState<Id<'barbers'> | null>(null)
+  const today = new Date()
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+  // T-52: Load initial state from localStorage if available
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const saved = localStorage.getItem('barberpro_selected_date')
+    return searchParams.get('date') ?? saved ?? todayStr
+  })
+  const [selectedBarberId, setSelectedBarberId] = useState<Id<'barbers'> | null>(() => {
+    return (localStorage.getItem('barberpro_selected_barber_id') as Id<'barbers'>) ?? null
+  })
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
 
@@ -29,10 +37,21 @@ export default function BookingPage() {
     selectedBarberId ? { barberId: selectedBarberId, date: selectedDate } : 'skip'
   )
 
+  // T-52: Save to localStorage when state changes
+  useEffect(() => {
+    localStorage.setItem('barberpro_selected_date', selectedDate)
+  }, [selectedDate])
+
+  useEffect(() => {
+    if (selectedBarberId) {
+      localStorage.setItem('barberpro_selected_barber_id', selectedBarberId)
+    }
+  }, [selectedBarberId])
+
   useEffect(() => {
     if (barbers && barbers.length > 0) {
       const isValid = barbers.some((b: any) => b._id === selectedBarberId)
-      if (!isValid) {
+      if (!isValid && !selectedBarberId) {
         setSelectedBarberId(barbers[0]._id)
         setSelectedTime(null)
       }
@@ -47,19 +66,34 @@ export default function BookingPage() {
 
   return (
     <div className="min-h-screen bg-primary text-surface" dir={isRTL ? 'rtl' : 'ltr'}>
-      <Navbar />
-
       {/* Page header */}
-      <div className="pt-24 pb-6 px-4 border-b border-white/5">
+      <div className="pt-12 pb-6 px-4 border-b border-white/5">
         <div className="max-w-2xl mx-auto">
-          <button
-            onClick={() => navigate('/')}
-            className={`flex items-center gap-2 text-surface/40 hover:text-accent transition-colors text-sm mb-4 cursor-pointer ${isRTL ? 'font-arabic flex-row-reverse' : 'font-english'}`}
-            aria-label={t('common.back')}
-          >
-            <span className={isRTL ? 'rotate-180 inline-block' : 'inline-block'}>←</span>
-            {t('common.back')}
-          </button>
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => navigate('/')}
+              className={`flex items-center gap-2 text-surface/40 hover:text-accent transition-colors text-sm cursor-pointer ${isRTL ? 'font-arabic flex-row-reverse' : 'font-english'}`}
+              aria-label={t('common.back')}
+            >
+              <span className={isRTL ? 'rotate-180 inline-block' : 'inline-block'}>←</span>
+              {t('common.back')}
+            </button>
+
+            {/* Language toggle (Matches Navbar style) */}
+            <motion.button
+              onClick={() => i18n.changeLanguage(isRTL ? 'en' : 'ar')}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/40
+                         text-accent text-xs font-medium hover:border-accent hover:bg-accent/10
+                         transition-all duration-200 cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span className="text-sm">{isRTL ? '🇬🇧' : '🇸🇦'}</span>
+              <span className={isRTL ? 'font-english uppercase' : 'font-arabic'}>
+                {isRTL ? 'EN' : 'العربية'}
+              </span>
+            </motion.button>
+          </div>
           <h1 className={`text-3xl font-bold text-white mb-1 ${isRTL ? 'font-arabic' : 'font-english'}`}>
             {t('booking.pageTitle')}
           </h1>
@@ -113,6 +147,10 @@ export default function BookingPage() {
               <span className="flex items-center gap-1 font-english">
                 <span className="w-2 h-2 rounded-full bg-red-400/60 inline-block" />
                 {t('booking.booked')}
+              </span>
+              <span className="flex items-center gap-1 font-english">
+                <span className="w-2 h-2 rounded-full bg-red-600 inline-block" />
+                {isRTL ? 'مغلق' : 'Blocked'}
               </span>
             </div>
           </div>

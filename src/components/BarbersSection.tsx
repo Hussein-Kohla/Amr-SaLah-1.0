@@ -24,6 +24,28 @@ function BarberCard({ barber, index }: { barber: Doc<'barbers'>; index: number }
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: '-60px' })
 
+  const formatTime = (time: string, isRTL: boolean) => {
+    try {
+      const parts = time.replace(/[^0-9:]/g, '').split(':')
+      let hours = Number(parts[0])
+      let mins = parts[1] || '00'
+      
+      let suffix = ''
+      if (isRTL) {
+        if (hours === 12 || (hours > 12 && hours < 18)) suffix = 'الظهر'
+        else if (hours >= 18 && hours < 24) suffix = 'مساءً'
+        else suffix = 'ليل'
+      } else {
+        suffix = hours >= 12 ? 'PM' : 'AM'
+      }
+      
+      const hours12 = hours % 12 || 12
+      return `${hours12}:${mins} ${suffix}`
+    } catch {
+      return time
+    }
+  }
+
   return (
     <motion.div
       ref={ref}
@@ -61,9 +83,9 @@ function BarberCard({ barber, index }: { barber: Doc<'barbers'>; index: number }
       <p className={`text-surface/40 text-sm mb-3 ${isRTL ? 'font-english' : 'font-arabic'}`}>
         {isRTL ? barber.nameEn : barber.nameAr}
       </p>
-      <div className="flex items-center gap-1.5 text-accent/70 text-xs font-english">
+      <div className={`flex items-center gap-1.5 text-accent/70 text-sm ${isRTL ? 'font-arabic font-medium' : 'font-english'}`}>
         <span>🕐</span>
-        <span>{barber.workingHours.start} – {barber.workingHours.end}</span>
+        <span dir="auto">{formatTime(barber.workingHours.start, isRTL)} – {formatTime(barber.workingHours.end, isRTL)}</span>
       </div>
       <motion.div
         className="h-[1px] bg-accent rounded-full mt-4"

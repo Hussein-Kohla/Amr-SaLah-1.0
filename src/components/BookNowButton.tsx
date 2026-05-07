@@ -13,7 +13,8 @@ export default function BookNowButton({ size = 'default', className = '' }: Book
   const isRTL = i18n.language === 'ar'
 
   const handleClick = () => {
-    const today = new Date().toISOString().split('T')[0]
+    const d = new Date()
+    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
     navigate(`/booking?date=${today}`)
   }
 

@@ -41,13 +41,10 @@ export default function HeroSection() {
       aria-label={t('hero.label')}
     >
       <motion.div
-        className="absolute inset-0 w-full h-[120%] -top-[10%] bg-center bg-cover bg-no-repeat"
+        className="absolute inset-0 w-[110%] h-[130%] -left-[5%] -top-[15%] bg-center bg-cover bg-no-repeat blur-sm will-change-transform"
         style={{ backgroundImage: 'url(/hero-bg.png)', y: bgY }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/70 via-primary/50 to-primary/90" />
-      <div className="absolute inset-0 opacity-10"
-        style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E\")" }}
-      />
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/80 via-primary/60 to-primary" />
 
       <motion.div
         className="relative z-10 text-center px-4 max-w-4xl mx-auto"
@@ -63,10 +60,10 @@ export default function HeroSection() {
 
           <motion.h1
             variants={fadeUpVariant}
-            className={`text-6xl sm:text-7xl md:text-8xl font-bold text-white leading-tight mb-2 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] ${isRTL ? 'font-arabic' : 'font-english'}`}
+            className={`text-6xl sm:text-7xl md:text-8xl font-bold text-[#E8DECB] leading-tight mb-2 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] ${isRTL ? 'font-arabic' : 'font-english'}`}
           >
             {t('hero.titleMain')}
-            <span className="text-accent drop-shadow-[0_0_15px_rgba(201,168,76,0.3)]">{t('hero.titleAccent')}</span>
+            <span className="text-accent drop-shadow-[0_0_15px_rgba(179,136,39,0.5)]">{t('hero.titleAccent')}</span>
           </motion.h1>
 
           <motion.div

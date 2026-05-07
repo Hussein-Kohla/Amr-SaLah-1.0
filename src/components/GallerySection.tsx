@@ -3,10 +3,12 @@ import { motion, useInView, type Variants } from 'framer-motion'
 import { useRef } from 'react'
 
 const galleryItems = [
-  { key: 'cut',      src: '/gallery-1.png', gridClass: 'md:col-span-2 md:row-span-1' },
-  { key: 'interior', src: '/gallery-2.png', gridClass: 'md:col-span-1 md:row-span-2' },
-  { key: 'tools',    src: '/gallery-3.png', gridClass: 'md:col-span-1 md:row-span-1' },
-  { key: 'look',     src: '/gallery-4.png', gridClass: 'md:col-span-1 md:row-span-1' },
+  { key: 'gal1', src: '/Gallery/gal-1.jpeg', gridClass: 'md:col-span-2 md:row-span-2' },
+  { key: 'gal2', src: '/Gallery/gal-2.jpeg', gridClass: 'md:col-span-1 md:row-span-1' },
+  { key: 'gal3', src: '/Gallery/gal-3.jpeg', gridClass: 'md:col-span-1 md:row-span-1' },
+  { key: 'gal4', src: '/Gallery/gal-4.jpeg', gridClass: 'md:col-span-1 md:row-span-1' },
+  { key: 'gal5', src: '/Gallery/gal-5.jpeg', gridClass: 'md:col-span-1 md:row-span-1' },
+  { key: 'gal6', src: '/Gallery/gal-6.jpeg', gridClass: 'md:col-span-1 md:row-span-1' },
 ] as const
 
 const titleVariants: Variants = {
@@ -84,7 +86,7 @@ export default function GallerySection() {
         </motion.div>
 
         {/* Bento Box Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 md:grid-rows-2 gap-4 md:gap-6 md:h-[600px]">
+        <div className="grid grid-cols-1 md:grid-cols-3 auto-rows-[250px] gap-4 md:gap-6">
           {galleryItems.map((item, index) => (
             <GalleryCard key={item.key} item={item} index={index} />
           ))}

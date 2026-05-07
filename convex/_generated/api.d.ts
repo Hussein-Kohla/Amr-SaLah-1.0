@@ -10,7 +10,9 @@
 
 import type * as admin from "../admin.js";
 import type * as appointments from "../appointments.js";
+import type * as auth from "../auth.js";
 import type * as barbers from "../barbers.js";
+import type * as blocks from "../blocks.js";
 import type * as seed from "../seed.js";
 
 import type {
@@ -22,7 +24,9 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   appointments: typeof appointments;
+  auth: typeof auth;
   barbers: typeof barbers;
+  blocks: typeof blocks;
   seed: typeof seed;
 }>;
 

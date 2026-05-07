@@ -20,9 +20,10 @@ const socialLinks = [
 ]
 
 const footerLinks = [
-  { href: '#services', key: 'footer.links.services' },
-  { href: '#team',     key: 'footer.links.team' },
   { href: '#gallery',  key: 'footer.links.gallery' },
+  { href: '#reviews',  key: 'footer.links.reviews' },
+  { href: '#team',     key: 'footer.links.team' },
+  { href: '#services', key: 'footer.links.services' },
   { href: '#location', key: 'footer.links.location' },
 ]
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
-import { useMutation } from 'convex/react'
+import { useMutation, useAction } from 'convex/react'
 import { api } from '../../convex/_generated/api'
 import type { Id } from '../../convex/_generated/dataModel'
 
@@ -21,15 +21,19 @@ interface FormData {
   name: string
   age: string
   phone: string
+  email: string
+  otp: string
 }
 
 interface FormErrors {
   name?: string
   age?: string
   phone?: string
+  email?: string
+  otp?: string
 }
 
-const EGYPT_PHONE_REGEX = /^01\d{9}$/
+const EGYPT_PHONE_REGEX = /^01[0125][0-9]{8}$/
 
 function validate(data: FormData, t: TFunction): FormErrors {
   const errors: FormErrors = {}
@@ -45,6 +49,9 @@ function validate(data: FormData, t: TFunction): FormErrors {
   if (!EGYPT_PHONE_REGEX.test(data.phone.replace(/\s/g, ''))) {
     errors.phone = t('modal.phoneInvalid')
   }
+  if (!data.email.trim().toLowerCase().endsWith('@gmail.com')) {
+    errors.email = t('modal.emailInvalid')
+  }
   return errors
 }
 
@@ -58,7 +65,7 @@ function formatDate(dateStr: string, isRTL: boolean): string {
   })
 }
 
-type ModalState = 'form' | 'loading' | 'success' | 'error'
+type ModalState = 'form' | 'otp' | 'loading' | 'success' | 'error'
 
 export default function BookingModal({
   isOpen,
@@ -73,14 +80,42 @@ export default function BookingModal({
   const { t, i18n } = useTranslation()
   const isRTL = i18n.language === 'ar'
 
-  const [form, setForm] = useState<FormData>({ name: '', age: '', phone: '' })
+  const [form, setForm] = useState<FormData>(() => {
+    const saved = localStorage.getItem('barberpro_booking_form')
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved)
+        return { ...parsed, otp: '' } // Never persist OTP
+      } catch (e) { /* ignore */ }
+    }
+    return { name: '', age: '', phone: '', email: '', otp: '' }
+  })
   const [errors, setErrors] = useState<FormErrors>({})
   const [modalState, setModalState] = useState<ModalState>('form')
   const [serverError, setServerError] = useState('')
+  const [wantsReminder, setWantsReminder] = useState(true)
   const drawerRef = useRef<HTMLDivElement>(null)
   const firstInputRef = useRef<HTMLInputElement>(null)
 
+  const requestNotificationPermission = async () => {
+    if (!('Notification' in window)) return
+    const permission = await Notification.requestPermission()
+    if (permission !== 'granted') {
+      setWantsReminder(false)
+    } else {
+      setWantsReminder(true)
+    }
+  }
+
   const createAppointment = useMutation(api.appointments.createAppointment)
+  const sendOtpEmail = useAction(api.auth.sendOtpEmail)
+  const verifyOtp = useMutation(api.auth.verifyOtp)
+
+  // T-52: Save to localStorage when form changes
+  useEffect(() => {
+    const { otp, ...dataToSave } = form
+    localStorage.setItem('barberpro_booking_form', JSON.stringify(dataToSave))
+  }, [form])
 
   // T-51: Escape key closes modal
   useEffect(() => {
@@ -101,14 +136,13 @@ export default function BookingModal({
   }, [isOpen, modalState])
 
   const handleClose = () => {
-    setForm({ name: '', age: '', phone: '' })
     setErrors({})
     setModalState('form')
     setServerError('')
     onClose()
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const errs = validate(form, t)
     if (Object.keys(errs).length > 0) {
@@ -118,6 +152,32 @@ export default function BookingModal({
     setErrors({})
     setModalState('loading')
     try {
+      await sendOtpEmail({
+        email: form.email.trim().toLowerCase(),
+        phone: form.phone.replace(/\s/g, ''),
+      })
+      setModalState('otp')
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : ''
+      setServerError(msg || t('modal.genericError'))
+      setModalState('error')
+    }
+  }
+
+  const handleOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (form.otp.length !== 6) {
+      setErrors({ otp: t('modal.otpInvalid') })
+      return
+    }
+    setErrors({})
+    setModalState('loading')
+    try {
+      const userId = await verifyOtp({
+        email: form.email.trim().toLowerCase(),
+        code: form.otp,
+        phone: form.phone.replace(/\s/g, ''),
+      })
       await createAppointment({
         barberId,
         date,
@@ -125,13 +185,22 @@ export default function BookingModal({
         customerName: form.name.trim(),
         customerAge: Number(form.age),
         customerPhone: form.phone.replace(/\s/g, ''),
+        customerEmail: form.email.trim().toLowerCase(),
+        userId: userId ?? undefined,
+        wantsReminder,
       })
       setModalState('success')
+      localStorage.removeItem('barberpro_booking_form')
       onConfirmed()
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
-      setServerError(msg.includes('SLOT_TAKEN') ? t('modal.slotTaken') : t('modal.genericError'))
-      setModalState('error')
+      if (msg.includes('EXPIRED_OTP') || msg.includes('INVALID_OTP')) {
+        setErrors({ otp: t('modal.otpInvalid') })
+        setModalState('otp')
+      } else {
+        setServerError(msg.includes('SLOT_TAKEN') ? t('modal.slotTaken') : t('modal.genericError'))
+        setModalState('error')
+      }
     }
   }
 
@@ -195,9 +264,30 @@ export default function BookingModal({
                   <h2 className={`text-white text-xl font-bold mb-2 ${isRTL ? 'font-arabic' : 'font-english'}`}>
                     {t('modal.successTitle')}
                   </h2>
-                  <p className={`text-surface/50 text-sm mb-6 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                  <p className={`text-surface/50 text-sm mb-4 ${isRTL ? 'font-arabic' : 'font-english'}`}>
                     {t('modal.successSubtitle')}
                   </p>
+
+                  {/* Warning Message */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className={`bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-6 text-red-400 text-xs leading-relaxed font-medium flex flex-col items-center gap-3 ${isRTL ? 'font-arabic' : 'font-english'}`}
+                  >
+                    <p className="text-center">{t('modal.successWarning')}</p>
+                    <a
+                      href="https://wa.me/201000823374"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white px-4 py-2 rounded-lg font-bold transition-colors"
+                    >
+                      <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+                      </svg>
+                      <span dir="ltr">010 00823374</span>
+                    </a>
+                  </motion.div>
 
                   {/* Booking summary card */}
                   <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 text-sm space-y-3 mb-6">
@@ -219,8 +309,8 @@ export default function BookingModal({
                     ))}
                   </div>
 
-                  {/* Screenshot & Arrival Reminders */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 w-full">
+                  {/* Success Banner Info Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6 w-full">
                     <motion.div
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -228,7 +318,7 @@ export default function BookingModal({
                       className="flex flex-col items-center justify-center gap-1.5 text-accent/90 bg-accent/10 py-3 px-3 rounded-xl border border-accent/20 shadow-sm text-center"
                     >
                       <span className="text-xl animate-pulse">📸</span>
-                      <span className={`text-xs font-medium leading-relaxed ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                      <span className={`text-[10px] font-medium leading-relaxed ${isRTL ? 'font-arabic' : 'font-english'}`}>
                         {isRTL ? 'يُرجى أخذ لقطة شاشة (Screenshot) للتأكيد' : 'Take a screenshot to confirm'}
                       </span>
                     </motion.div>
@@ -240,10 +330,26 @@ export default function BookingModal({
                       className="flex flex-col items-center justify-center gap-1.5 text-blue-400 bg-blue-500/10 py-3 px-3 rounded-xl border border-blue-500/20 shadow-sm text-center"
                     >
                       <span className="text-xl">⏰</span>
-                      <span className={`text-xs font-medium leading-relaxed ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                      <span className={`text-[10px] font-medium leading-relaxed ${isRTL ? 'font-arabic' : 'font-english'}`}>
                         {isRTL ? 'يُرجى الحضور قبل الموعد بـ 10 دقائق' : 'Please arrive 10 mins early'}
                       </span>
                     </motion.div>
+
+                    <motion.button
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      onClick={requestNotificationPermission}
+                      className="flex flex-col items-center justify-center gap-1.5 py-3 px-3 rounded-xl border transition-all duration-300 text-center cursor-pointer text-emerald-400 bg-emerald-500/10 border-emerald-500/20 shadow-sm"
+                    >
+                      <span className="text-xl">🔔</span>
+                      <span className={`text-[10px] font-bold leading-relaxed ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                        {isRTL ? 'سيتم إرسال إشعار قبل الموعد بـ 15 دقيقة' : 'Notification will be sent 15m before'}
+                      </span>
+                      <span className={`text-[9px] font-medium opacity-80 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                        {isRTL ? 'اضغط لإعطاء الإذن' : 'Click to grant permission'}
+                      </span>
+                    </motion.button>
                   </div>
 
                   <button
@@ -277,8 +383,74 @@ export default function BookingModal({
                 </motion.div>
               )}
 
+              {/* ── OTP STATE ── */}
+              {modalState === 'otp' && (
+                <motion.div
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="space-y-4"
+                  dir={isRTL ? 'rtl' : 'ltr'}
+                >
+                  <div className="flex items-center justify-between mb-5">
+                    <h2 className={`text-white font-bold text-lg ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                      {t('modal.otpTitle')}
+                    </h2>
+                    <button
+                      onClick={handleClose}
+                      className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-surface/60 hover:bg-white/20 transition-colors cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <p className={`text-surface/60 text-sm mb-6 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                    {t('modal.otpSubtitle')}
+                  </p>
+
+                  <form onSubmit={handleOtpSubmit} className="space-y-4">
+                    <div>
+                      <label className={`block text-surface/60 text-xs mb-1.5 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                        {t('modal.otpLabel')}
+                      </label>
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={form.otp}
+                        onChange={(e) => setForm({ ...form, otp: e.target.value.replace(/\D/g, '') })}
+                        placeholder={t('modal.otpPlaceholder')}
+                        className={`text-center tracking-widest text-2xl font-bold ${inputClass(!!errors.otp)}`}
+                        dir="ltr"
+                        autoComplete="one-time-code"
+                      />
+                      {errors.otp && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`text-red-400 text-xs mt-1.5 ${isRTL ? 'font-arabic' : 'font-english'}`}
+                        >
+                          {errors.otp}
+                        </motion.p>
+                      )}
+                    </div>
+                    
+                    <motion.button
+                      type="submit"
+                      disabled={form.otp.length !== 6}
+                      className={`
+                        w-full py-3.5 rounded-xl font-bold text-primary mt-4
+                        ${form.otp.length !== 6 ? 'bg-accent/60 cursor-not-allowed' : 'bg-accent cursor-pointer hover:brightness-110'}
+                        transition-all duration-200
+                        ${isRTL ? 'font-arabic' : 'font-english'}
+                      `}
+                    >
+                      {t('modal.otpVerifyBtn')}
+                    </motion.button>
+                  </form>
+                </motion.div>
+              )}
+
               {/* ── FORM STATE ── */}
-              {(modalState === 'form' || modalState === 'loading') && (
+              {(modalState === 'form' || (modalState === 'loading' && !form.otp)) && (
                 <>
                   {/* Header */}
                   <div className="flex items-center justify-between mb-5">
@@ -310,7 +482,7 @@ export default function BookingModal({
                   </div>
 
                   {/* Form */}
-                  <form onSubmit={handleSubmit} noValidate className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
+                  <form onSubmit={handleFormSubmit} noValidate className="space-y-4" dir={isRTL ? 'rtl' : 'ltr'}>
                     {/* Name */}
                     <div>
                       <label className={`block text-surface/60 text-xs mb-1.5 ${isRTL ? 'font-arabic' : 'font-english'}`}>
@@ -368,6 +540,33 @@ export default function BookingModal({
                           role="alert"
                         >
                           {errors.age}
+                        </motion.p>
+                      )}
+                    </div>
+
+                    {/* Email */}
+                    <div>
+                      <label className={`block text-surface/60 text-xs mb-1.5 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                        {t('modal.emailLabel')}
+                      </label>
+                      <input
+                        id="booking-email-input"
+                        type="email"
+                        value={form.email}
+                        onChange={(e) => setForm({ ...form, email: e.target.value })}
+                        placeholder={t('modal.emailPlaceholder')}
+                        className={inputClass(!!errors.email)}
+                        dir="ltr"
+                        autoComplete="email"
+                        aria-invalid={!!errors.email}
+                      />
+                      {errors.email && (
+                        <motion.p
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`text-red-400 text-xs mt-1.5 ${isRTL ? 'font-arabic' : 'font-english'}`}
+                        >
+                          {errors.email}
                         </motion.p>
                       )}
                     </div>

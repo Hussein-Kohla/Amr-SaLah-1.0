@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 
 interface Slot {
   time: string
-  status: 'available' | 'booked' | 'blocked' | 'outside'
+  status: 'available' | 'booked' | 'blocked' | 'outside' | 'pending' | 'confirmed'
 }
 
 interface SlotGridProps {
@@ -43,7 +43,8 @@ export default function SlotGrid({ slots, onSlotClick, selectedTime }: SlotGridP
 
   const renderSlot = (slot: Slot, idx: number) => {
     const isAvailable = slot.status === 'available'
-    const isBooked = slot.status === 'booked' || slot.status === 'blocked'
+    const isBlocked = slot.status === 'blocked'
+    const isBooked = slot.status === 'booked' || slot.status === 'pending' || slot.status === 'confirmed'
     const isSelected = slot.time === selectedTime
     const isWaiting = slot.time.startsWith('Waiting')
 
@@ -68,6 +69,9 @@ export default function SlotGrid({ slots, onSlotClick, selectedTime }: SlotGridP
           ${isBooked
             ? 'bg-red-500/10 border border-red-500/20 text-red-400/60 cursor-not-allowed'
             : ''}
+          ${isBlocked
+            ? 'bg-red-600/20 border border-red-600/40 text-red-500 cursor-not-allowed shadow-[inset_0_0_10px_rgba(220,38,38,0.1)]'
+            : ''}
         `}
         initial={{ opacity: 0, scale: 0.85 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -80,6 +84,7 @@ export default function SlotGrid({ slots, onSlotClick, selectedTime }: SlotGridP
       >
         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
           isSelected ? 'bg-primary' :
+          isBlocked ? 'bg-red-600 shadow-[0_0_5px_rgba(220,38,38,0.8)]' :
           isAvailable 
             ? (isWaiting ? 'bg-amber-400' : 'bg-emerald-400')
             : 'bg-red-400/60'
@@ -96,6 +101,14 @@ export default function SlotGrid({ slots, onSlotClick, selectedTime }: SlotGridP
           <span className={`absolute -bottom-0.5 inset-x-0 text-center text-[9px] text-red-400/60 ${isRTL ? 'font-arabic' : 'font-english'}`}>
             {isRTL ? 'محجوز' : 'Booked'}
           </span>
+        )}
+        {isBlocked && (
+          <>
+            <span className="absolute top-1 right-2 text-[10px] font-bold">✕</span>
+            <span className={`absolute -bottom-0.5 inset-x-0 text-center text-[9px] font-bold text-red-500 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+              {isRTL ? 'مغلق' : 'Blocked'}
+            </span>
+          </>
         )}
       </motion.button>
     )

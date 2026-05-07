@@ -5,6 +5,7 @@ import { api } from '../../convex/_generated/api'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import type { Id } from '../../convex/_generated/dataModel'
+import AdminScheduleManager from '../components/AdminScheduleManager'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type SnackType = 'success' | 'error'
@@ -169,25 +170,24 @@ function MiniCalendar({ dates, selected, onSelect, isRTL }: {
 // ─── Time sort helper ─────────────────────────────────────────────────────────
 function parseTime(slot: string): number {
   if (!slot) return Infinity
-  const s = slot.trim()
-  if (/^wait/i.test(s) || s.includes('انتظار')) return Infinity
-  // "AM 09:00" or "PM 10:00"
-  const m = s.match(/^(AM|PM)\s+(\d{1,2}):(\d{2})$/i)
-  if (m) {
-    let h = parseInt(m[2]), mn = parseInt(m[3])
-    if (m[1].toUpperCase()==='PM' && h!==12) h+=12
-    if (m[1].toUpperCase()==='AM' && h===12) h=0
-    return h*60+mn
-  }
-  // "09:00 AM" or "10:00 PM"
-  const m2 = s.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i)
-  if (m2) {
-    let h = parseInt(m2[1]), mn = parseInt(m2[2])
-    if (m2[3].toUpperCase()==='PM' && h!==12) h+=12
-    if (m2[3].toUpperCase()==='AM' && h===12) h=0
-    return h*60+mn
-  }
-  return Infinity
+  const s = slot.trim().toUpperCase()
+  if (s.includes('WAIT') || s.includes('انتظار')) return 2000 // Push waiting to end
+
+  // Try to find AM/PM
+  const isPM = s.includes('PM')
+  const isAM = s.includes('AM')
+
+  // Extract digits
+  const timeMatch = s.match(/(\d{1,2}):(\d{2})/)
+  if (!timeMatch) return Infinity
+
+  let h = parseInt(timeMatch[1])
+  const m = parseInt(timeMatch[2])
+
+  if (isPM && h !== 12) h += 12
+  if (isAM && h === 12) h = 0
+
+  return h * 60 + m
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -207,6 +207,8 @@ export default function AdminPage() {
   })
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null)
   const [activeTab, setActiveTab] = useState<'all' | 'confirmed' | 'booked'>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortBy, setSortBy] = useState<'name' | 'phone' | 'email' | 'age' | 'barber' | ''>('')
 
   const loginMutation = useMutation(api.admin.login)
   const appointments  = useQuery(api.admin.getAppointments, isAuthenticated ? {} : 'skip')
@@ -291,39 +293,81 @@ export default function AdminPage() {
     )
   }
 
-  // ── Dashboard ──
+  // ── Dashboard Logic ──
   const allDates = appointments ? [...new Set(appointments.map(a => a.date))].sort() : []
-  const filtered  = selectedDate ? (appointments ?? []).filter(a => a.date === selectedDate) : (appointments ?? [])
+  
+  // 1. Basic Filter by Date
+  const dateFiltered = selectedDate ? (appointments ?? []).filter(a => a.date === selectedDate) : (appointments ?? [])
 
-  const stats = {
-    total: filtered.length,
-    confirmed: filtered.filter((a) => a.status === "confirmed").length,
-    waiting: filtered.filter((a) => a.status === "booked").length,
-  }
-
-  const tabFiltered = filtered.filter(a => {
+  // 2. Filter by Tab (Status)
+  const tabFiltered = dateFiltered.filter(a => {
     if (activeTab === 'confirmed') return a.status === 'confirmed'
     if (activeTab === 'booked') return a.status === 'booked'
     return true
   })
 
-  const byDate = tabFiltered.reduce((acc, appt) => {
+  // 3. Search Query (Name, Phone, Email, Barber)
+  const searched = tabFiltered.filter(a => {
+    const q = searchQuery.toLowerCase().trim()
+    if (!q) return true
+    return (
+      a.customerName.toLowerCase().includes(q) ||
+      a.customerPhone.includes(q) ||
+      (a.customerEmail?.toLowerCase().includes(q)) ||
+      (a.barber?.nameAr.toLowerCase().includes(q)) ||
+      (a.barber?.nameEn.toLowerCase().includes(q))
+    )
+  })
+
+  // Stats from dateFiltered (regardless of search/sort)
+  const stats = {
+    total: dateFiltered.length,
+    confirmed: dateFiltered.filter((a) => a.status === "confirmed").length,
+    waiting: dateFiltered.filter((a) => a.status === "booked").length,
+  }
+
+  const byDate = searched.reduce((acc, appt) => {
     if (!acc[appt.date]) acc[appt.date] = []
     acc[appt.date].push(appt)
     return acc
-  }, {} as Record<string, typeof tabFiltered>)
+  }, {} as Record<string, typeof searched>)
 
   const sortedDates = Object.keys(byDate).sort((a, b) => new Date(b).getTime() - new Date(a).getTime())
 
-  // Sort each day's appointments: chronological, waiting last
-  const sortedByDate = Object.fromEntries(
-    sortedDates.map(date => [date, [...byDate[date]].sort((a, b) => parseTime(a.timeSlot) - parseTime(b.timeSlot))])
+  // 4. Sorting logic for each group
+  const sortAppts = (list: typeof searched) => {
+    return [...list].sort((a, b) => {
+      let diff = 0
+      if (sortBy === 'name') diff = a.customerName.localeCompare(b.customerName)
+      else if (sortBy === 'phone') diff = a.customerPhone.localeCompare(b.customerPhone)
+      else if (sortBy === 'email') diff = (a.customerEmail || '').localeCompare(b.customerEmail || '')
+      else if (sortBy === 'age') diff = b.customerAge - a.customerAge
+      else if (sortBy === 'barber') {
+        const nameA = isRTL ? a.barber?.nameAr : a.barber?.nameEn
+        const nameB = isRTL ? b.barber?.nameAr : b.barber?.nameEn
+        diff = (nameA || '').localeCompare(nameB || '')
+      }
+      
+      // Tie-breaker or default: sort by Time
+      if (diff === 0) {
+        return parseTime(a.timeSlot) - parseTime(b.timeSlot)
+      }
+      return diff
+    })
+  }
+
+  const finalGrouped = Object.fromEntries(
+    sortedDates.map(date => [date, sortAppts(byDate[date])])
   )
+
+  const toggleLanguage = () => {
+    i18n.changeLanguage(i18n.language === 'ar' ? 'en' : 'ar')
+  }
 
   return (
     <div className="min-h-screen bg-[#0f0f1a] text-white" dir={isRTL ? 'rtl' : 'ltr'}>
 
-      {/* Snackbar stack – always LTR positioning */}
+      {/* Snackbar stack */}
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3" dir="ltr">
         <AnimatePresence mode="popLayout">
           {snacks.map(s => <Snackbar key={s.id} item={s} onClose={removeSnack} />)}
@@ -349,15 +393,32 @@ export default function AdminPage() {
             </h1>
             <p className="text-white/40 text-sm mt-1">{isRTL ? 'إدارة الحجوزات والبيانات' : 'Manage appointments and data'}</p>
           </div>
-          <div className="flex gap-3">
-            <button onClick={() => navigate('/')}
-              className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/5 transition-colors text-sm">
-              {isRTL ? 'زيارة الموقع' : 'Visit Site'}
-            </button>
-            <button onClick={handleLogout}
-              className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors text-sm">
-              {isRTL ? 'تسجيل الخروج' : 'Logout'}
-            </button>
+          <div className="flex items-center gap-4">
+            {/* Language toggle (Matches Navbar style) */}
+            <motion.button
+              onClick={toggleLanguage}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-accent/40
+                         text-accent text-xs font-medium hover:border-accent hover:bg-accent/10
+                         transition-all duration-200 cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <span className="text-sm">{isRTL ? '🇬🇧' : '🇸🇦'}</span>
+              <span className={isRTL ? 'font-english uppercase' : 'font-arabic'}>
+                {isRTL ? 'EN' : 'العربية'}
+              </span>
+            </motion.button>
+
+            <div className="flex gap-2">
+              <button onClick={() => navigate('/')}
+                className="px-4 py-2 rounded-lg border border-white/10 hover:bg-white/5 transition-colors text-sm">
+                {isRTL ? 'زيارة الموقع' : 'Visit Site'}
+              </button>
+              <button onClick={handleLogout}
+                className="px-4 py-2 rounded-lg bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors text-sm">
+                {isRTL ? 'تسجيل الخروج' : 'Logout'}
+              </button>
+            </div>
           </div>
         </header>
 
@@ -387,13 +448,52 @@ export default function AdminPage() {
                 </div>
               </div>
 
+              {/* Advanced Controls: Search & Sort */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 bg-[#16161f]/80 backdrop-blur-md p-5 rounded-[2rem] border border-white/5 shadow-xl">
+                {/* Search */}
+                <div className="lg:col-span-8 relative group">
+                  <div className={`absolute top-1/2 -translate-y-1/2 text-accent/40 group-focus-within:text-accent transition-colors ${isRTL ? 'right-4' : 'left-4'}`}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={isRTL ? 'ابحث عن عميل بالاسم، الهاتف، أو الايميل...' : 'Search by name, phone, or email...'}
+                    className={`w-full bg-black/40 border border-white/10 rounded-2xl py-3.5 text-sm text-white placeholder:text-white/20 focus:border-accent/50 focus:bg-black/60 transition-all outline-none shadow-inner ${isRTL ? 'pr-12 pl-4 text-right font-arabic' : 'pl-12 pr-4 text-left font-english'}`}
+                  />
+                </div>
+
+                {/* Sort Dropdown */}
+                <div className="lg:col-span-4 flex items-center gap-3">
+                  <div className="relative w-full">
+                    <div className={`absolute top-1/2 -translate-y-1/2 text-accent/40 pointer-events-none ${isRTL ? 'left-4' : 'right-4'}`}>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                    </div>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as any)}
+                      className={`w-full appearance-none bg-black/40 border border-white/10 rounded-2xl py-3.5 px-5 text-sm text-white focus:border-accent/50 focus:bg-black/60 transition-all outline-none cursor-pointer shadow-inner ${isRTL ? 'font-arabic text-right' : 'font-english text-left'}`}
+                      style={{ colorScheme: 'dark' }}
+                    >
+                      <option value="" className="bg-[#1a1a2e]">{isRTL ? 'التصنيف الافتراضي' : 'Default Sort'}</option>
+                      <option value="name" className="bg-[#1a1a2e]">{isRTL ? 'العميل' : 'Customer'}</option>
+                      <option value="barber" className="bg-[#1a1a2e]">{isRTL ? 'الحلاق' : 'Barber'}</option>
+                      <option value="phone" className="bg-[#1a1a2e]">{isRTL ? 'رقم الهاتف' : 'Phone'}</option>
+                      <option value="age" className="bg-[#1a1a2e]">{isRTL ? 'العمر' : 'Age'}</option>
+                      <option value="email" className="bg-[#1a1a2e]">{isRTL ? 'البريد الإلكتروني' : 'Email'}</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
               {/* Tabs */}
               <div className="flex bg-[#16161f] rounded-xl p-1 gap-1">
                 <button
                   className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'all' ? 'bg-gradient-to-br from-[#c8a050] to-[#d4a840] text-[#0a0a0f] shadow-lg shadow-[#c8a050]/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
                   onClick={() => setActiveTab('all')}
                 >
-                  {isRTL ? 'الحجوزات' : 'All Appointments'}
+                  {isRTL ? 'الكل' : 'All'}
                 </button>
                 <button
                   className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'confirmed' ? 'bg-gradient-to-br from-[#c8a050] to-[#d4a840] text-[#0a0a0f] shadow-lg shadow-[#c8a050]/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
@@ -411,15 +511,23 @@ export default function AdminPage() {
 
               <div className="flex gap-6 items-start flex-col lg:flex-row">
                 {/* ── Calendar ── */}
-                <MiniCalendar dates={allDates} selected={selectedDate} onSelect={setSelectedDate} isRTL={isRTL} />
+                <div className="lg:sticky lg:top-6 space-y-6 z-50 relative">
+                  <MiniCalendar dates={allDates} selected={selectedDate} onSelect={setSelectedDate} isRTL={isRTL} />
+                  <AdminScheduleManager 
+                    selectedDate={selectedDate} 
+                    onDateChange={setSelectedDate}
+                    isRTL={isRTL} 
+                    onSnack={(type, title, msg) => addSnack(type, title, msg)} 
+                  />
+                </div>
 
                 {/* ── Cards Grid ── */}
-                <div className="flex-1 space-y-6 min-w-0 w-full">
+                <div className="flex-1 space-y-6 min-w-0 w-full z-10 relative">
                   {sortedDates.length === 0 ? (
                     <div className="w-full text-center py-20 bg-white/5 rounded-2xl border border-white/5 flex flex-col items-center gap-3">
                       <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center text-2xl opacity-40">✂️</div>
                       <p className="text-white/60 font-semibold">
-                        {isRTL ? 'لا توجد حجوزات' : 'No appointments'}
+                        {isRTL ? 'لا توجد حجوزات تطابق هذا البحث' : 'No matching appointments'}
                       </p>
                     </div>
                   ) : sortedDates.map(date => (
@@ -429,7 +537,7 @@ export default function AdminPage() {
                         <h2 className="text-lg font-bold text-white">{date}</h2>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        {sortedByDate[date].map((appt, idx) => (
+                        {finalGrouped[date].map((appt, idx) => (
                           <div key={appt._id}
                             className="bg-gradient-to-br from-[#14141c] to-[#1a1a24] border border-white/5 rounded-2xl overflow-hidden flex flex-col shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl hover:border-white/10"
                             style={{ animation: `slideIn 0.3s ease forwards`, animationDelay: `${(idx % 10) * 50}ms` }}>
@@ -460,13 +568,18 @@ export default function AdminPage() {
                                 <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{isRTL ? 'الحلاق' : 'Barber'}</span>
                                 <span className="text-[13px] font-semibold text-white/90 truncate">{appt.barber ? (isRTL ? appt.barber.nameAr : appt.barber.nameEn) : '—'}</span>
                               </div>
-                              <div className="flex flex-col gap-1">
+                              <div className="flex flex-col gap-1 text-center col-span-1">
                                 <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{isRTL ? 'رقم الهاتف' : 'Phone'}</span>
-                                <span className="text-[13px] text-white/60 font-mono" dir="ltr">{appt.customerPhone}</span>
+                                <span className="text-[13px] text-white/60 font-mono block" dir="ltr">{appt.customerPhone}</span>
                               </div>
-                              <div className="flex flex-col gap-1">
+                              <div className="flex flex-col gap-1 text-center col-span-1">
                                 <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{isRTL ? 'العمر' : 'Age'}</span>
-                                <span className="text-[13px] font-semibold text-white/90 truncate">{appt.customerAge} {isRTL ? 'سنة' : 'yrs'}</span>
+                                <span className="text-[13px] font-semibold text-white/90 truncate block">{appt.customerAge} {isRTL ? 'سنة' : 'yrs'}</span>
+                              </div>
+                              {/* New Email Field */}
+                              <div className="flex flex-col gap-1 col-span-2 border-t border-white/5 pt-2">
+                                <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider">{isRTL ? 'البريد الإلكتروني' : 'Email'}</span>
+                                <span className="text-[13px] text-white/70 truncate font-english">{appt.customerEmail || '—'}</span>
                               </div>
                             </div>
 

@@ -19,12 +19,23 @@ export const getSlots = query({
       )
       .collect();
 
+    // Get blocks for this barber on this date
+    const blocks = await ctx.db
+      .query("blocks")
+      .withIndex("by_barber_date", (q) =>
+        q.eq("barberId", barberId).eq("date", date)
+      )
+      .collect();
+
+    const isDayBlocked = blocks.some(b => !b.timeSlot);
+    const blockedSlots = new Set(blocks.filter(b => b.timeSlot).map(b => b.timeSlot));
+
     const bookedMap = new Map(
       appointments.map((a) => [a.timeSlot, a.status])
     );
 
     // Generate 30-min slots within working hours
-    const slots: { time: string; status: "available" | "booked" | "blocked" | "confirmed" | "outside" }[] = [];
+    const slots: { time: string; status: "available" | "booked" | "blocked" | "confirmed" | "pending" | "outside" }[] = [];
     
     let startH = 10, startM = 0;
     let endH = 22, endM = 0;
@@ -65,11 +76,15 @@ export const getSlots = query({
       const time = `${String(hours12).padStart(2, "0")}:${String(mins).padStart(2, "0")} ${ampm}`;
 
       const existingStatus = bookedMap.get(time);
+      const isBlocked = isDayBlocked || blockedSlots.has(time);
+
       slots.push({
         time,
-        status: existingStatus === "booked" || existingStatus === "blocked" || existingStatus === "confirmed"
-          ? existingStatus
-          : "available",
+        status: isBlocked 
+          ? "blocked"
+          : (existingStatus === "booked" || existingStatus === "blocked" || existingStatus === "confirmed" || existingStatus === "pending")
+            ? existingStatus as any
+            : "available",
       });
 
       current += 60; // 60-minute slots
@@ -79,11 +94,15 @@ export const getSlots = query({
     for (let i = 1; i <= 6; i++) {
       const time = `Waiting ${i}`;
       const existingStatus = bookedMap.get(time);
+      const isBlocked = isDayBlocked || blockedSlots.has(time);
+
       slots.push({
         time,
-        status: existingStatus === "booked" || existingStatus === "blocked" || existingStatus === "confirmed"
-          ? existingStatus
-          : "available",
+        status: isBlocked
+          ? "blocked"
+          : (existingStatus === "booked" || existingStatus === "blocked" || existingStatus === "confirmed" || existingStatus === "pending")
+            ? existingStatus as any
+            : "available",
       });
     }
 
@@ -99,6 +118,9 @@ export const createAppointment = mutation({
     customerName: v.string(),
     customerAge: v.number(),
     customerPhone: v.string(),
+    customerEmail: v.optional(v.string()),
+    userId: v.optional(v.id("users")),
+    wantsReminder: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // Check if slot is still available
@@ -110,7 +132,7 @@ export const createAppointment = mutation({
       .filter((q) => q.eq(q.field("timeSlot"), args.timeSlot))
       .first();
 
-    if (existing && (existing.status === "booked" || existing.status === "blocked" || existing.status === "confirmed")) {
+    if (existing && (existing.status === "booked" || existing.status === "blocked" || existing.status === "confirmed" || existing.status === "pending")) {
       throw new Error("SLOT_TAKEN");
     }
 
@@ -118,10 +140,13 @@ export const createAppointment = mutation({
       barberId: args.barberId,
       date: args.date,
       timeSlot: args.timeSlot,
-      status: "booked",
+      status: "pending",
       customerName: args.customerName,
       customerAge: args.customerAge,
       customerPhone: args.customerPhone,
+      customerEmail: args.customerEmail,
+      userId: args.userId,
+      wantsReminder: args.wantsReminder,
       createdAt: Date.now(),
     });
 
