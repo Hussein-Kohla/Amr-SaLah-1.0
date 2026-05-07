@@ -106,8 +106,7 @@ export default function ReviewsSection() {
           <div 
             className="flex w-max marquee-content"
             style={{ 
-              animation: `marquee 40s linear infinite`,
-              flexDirection: isRTL ? 'row-reverse' : 'row'
+              animation: `marquee 45s linear infinite`,
             }}
           >
             {duplicatedReviews.map((review, index) => (
@@ -128,10 +127,18 @@ export default function ReviewsSection() {
         }
         @keyframes marquee {
           0% { transform: translateX(0); }
-          100% { transform: translateX(${isRTL ? '33.33%' : '-33.33%'}); }
+          100% { transform: translateX(${isRTL ? '33.3333%' : '-33.3333%'}); }
+        }
+        /* Ensure the starting position for RTL is correct so it can move positive without blanking */
+        [dir="rtl"] .marquee-content {
+          transform: translateX(-33.3333%);
+        }
+        @keyframes marquee-rtl {
+          0% { transform: translateX(-33.3333%); }
+          100% { transform: translateX(0); }
         }
         [dir="rtl"] .marquee-content {
-          animation-direction: normal;
+          animation: marquee-rtl 45s linear infinite !important;
         }
       `}} />
     </section>
