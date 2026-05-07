@@ -146,7 +146,7 @@ export default function BookingModal({
       if ('serviceWorker' in navigator && 'PushManager' in window) {
         try {
           const reg = await navigator.serviceWorker.ready;
-          const VAPID_PUBLIC_KEY = "BOuRW7k0MYPtbLHvgvrmStKvgN1znLHRr01XFKaYTRmT-C2ED6Nm_lcW-4lx2QTT_zhJ1zYDuDcmE8BvruTSbL0";
+          const VAPID_PUBLIC_KEY = "BB4UntPs40JhTTaJoTi5f-MYKLNxwg7MRKVPW2OgYBKpEeWlSXTFp5NAc1qE75EMo74RLLYJmZR-vvxImZa57-c";
           
           let sub = await reg.pushManager.getSubscription();
           if (!sub) {

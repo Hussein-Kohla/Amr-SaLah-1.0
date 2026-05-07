@@ -14,8 +14,8 @@ export const sendPushNotification = action({
     const webpushModule = await import("web-push");
     const webpush = (webpushModule as any).default || webpushModule;
 
-    const VAPID_PUBLIC = "BOuRW7k0MYPtbLHvgvrmStKvgN1znLHRr01XFKaYTRmT-C2ED6Nm_lcW-4lx2QTT_zhJ1zYDuDcmE8BvruTSbL0";
-    const VAPID_PRIVATE = "II3p2w8_AC1zceZfd-2yoBz0v8TvtU2B75HsWrFuK6Y";
+    const VAPID_PUBLIC = "BB4UntPs40JhTTaJoTi5f-MYKLNxwg7MRKVPW2OgYBKpEeWlSXTFp5NAc1qE75EMo74RLLYJmZR-vvxImZa57-c";
+    const VAPID_PRIVATE = "Gkad0jPeREfwBfrdRF2LZKwhpr-5_yw6RO0-AKE7-uI";
 
     webpush.setVapidDetails(
       "mailto:example@yourdomain.com",
