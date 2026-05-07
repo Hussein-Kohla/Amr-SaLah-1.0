@@ -90,7 +90,14 @@ export const getSlots = query({
       
       if (status === "available" && date === todayEgypt) {
         const slotTime = new Date(date);
-        slotTime.setHours(actualHours, mins, 0, 0);
+        let h = actualHours;
+        // T-Fix: If slot is 12 AM and we're looking at a day that starts in the morning,
+        // it's actually midnight TONIGHT (start of next day), not the past midnight.
+        if (h === 0) {
+            slotTime.setDate(slotTime.getDate() + 1);
+        }
+        slotTime.setHours(h, mins, 0, 0);
+
         // T-Fix: Allow booking the current hour slot until the next hour begins
         const slotEndTime = slotTime.getTime() + 60 * 60 * 1000;
         if (nowEgypt.getTime() >= slotEndTime) {

@@ -118,7 +118,20 @@ export default function BookingModal({
     }
   }
 
+  // Helper to convert VAPID key
+  const urlBase64ToUint8Array = (base64String: string) => {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  };
+
   const saveAndSchedulePush = useMutation(api.notifications.saveAndScheduleReminder)
+  const sendTestPush = useAction(api.push.sendPushNotification);
 
   const requestNotificationPermission = async () => {
     if (!('Notification' in window)) return
@@ -128,10 +141,6 @@ export default function BookingModal({
       setWantsReminder(true)
       
       const minutesLeft = getMinutesLeft()
-      const title = isRTL ? 'تم تفعيل التنبيهات' : 'Notifications Enabled'
-      const body = minutesLeft === null
-        ? (isRTL ? 'سنقوم بتنبيهك فور توفر موعد' : 'We will notify you when a slot is available')
-        : (isRTL ? `فاضل ${Math.max(0, minutesLeft)} دقيقة على حجزك` : `${Math.max(0, minutesLeft)} minutes left for your booking`)
 
       // --- PUSH NOTIFICATION SETUP ---
       if ('serviceWorker' in navigator && 'PushManager' in window) {
@@ -143,35 +152,30 @@ export default function BookingModal({
           if (!sub) {
             sub = await reg.pushManager.subscribe({
               userVisibleOnly: true,
-              applicationServerKey: VAPID_PUBLIC_KEY
+              applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
             });
           }
 
+          // Send a test notification immediately to confirm it works
+          await sendTestPush({
+            subscription: sub,
+            title: isRTL ? '✅ صالون عمرو صلاح' : '✅ Amr Salah Salon',
+            body: isRTL ? 'الإشعارات تعمل بنجاح! سنقوم بتذكيرك قبل موعدك.' : 'Notifications are working! We will remind you before your appointment.',
+          });
+
           // Schedule 15-min reminder on the server if appointment exists
-          if (lastAppointmentId && minutesLeft !== null && minutesLeft > 15) {
-            const timeMatch = timeSlot.match(/(\d+):(\d+)\s*(AM|PM)?/i)
-            if (timeMatch) {
-              let hours = parseInt(timeMatch[1])
-              const mins = parseInt(timeMatch[2])
-              const period = timeMatch[3]?.toUpperCase()
-              if (period === 'PM' && hours !== 12) hours += 12
-              if (period === 'AM' && hours === 12) hours = 0
-              const target = new Date(date)
-              target.setHours(hours, mins, 0, 0)
-              
-              const scheduledTime = target.getTime() - (15 * 60 * 1000);
-              
+          if (lastAppointmentId && minutesLeft !== null) {
+            const reminderTime = Date.now() + (minutesLeft - 15) * 60000;
+            if (reminderTime > Date.now()) {
               await saveAndSchedulePush({
                 appointmentId: lastAppointmentId,
                 subscription: sub,
-                scheduledTime,
-                title: isRTL ? 'تذكير بالموعد' : 'Appointment Reminder',
-                body: isRTL ? 'باقي 15 دقيقة على موعد حجزك' : '15 minutes left for your appointment',
+                scheduledTime: reminderTime,
+                title: isRTL ? '⏰ تذكير بموعدك' : '⏰ Appointment Reminder',
+                body: isRTL ? 'باقي 15 دقيقة على موعد حلاقتك.' : '15 minutes left until your appointment.',
               });
             }
           }
-
-          reg.showNotification(title, { body, icon: '/favicon.svg' });
         } catch (err) {
           console.error("Push subscription failed", err);
           new Notification(title, { body, icon: '/favicon.svg' });
