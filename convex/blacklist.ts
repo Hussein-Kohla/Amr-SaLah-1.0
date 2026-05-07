@@ -42,16 +42,18 @@ export const checkBlocked = query({
   args: { email: v.optional(v.string()), phone: v.optional(v.string()) },
   handler: async (ctx, args) => {
     if (args.email) {
+      const email = args.email;
       const blocked = await ctx.db
         .query("userBlacklist")
-        .withIndex("by_value", (q) => q.eq("value", args.email))
+        .withIndex("by_value", (q) => q.eq("value", email))
         .first();
       if (blocked) return { blocked: true, type: "email", reason: blocked.reason };
     }
     if (args.phone) {
+      const phone = args.phone;
       const blocked = await ctx.db
         .query("userBlacklist")
-        .withIndex("by_value", (q) => q.eq("value", args.phone))
+        .withIndex("by_value", (q) => q.eq("value", phone))
         .first();
       if (blocked) return { blocked: true, type: "phone", reason: blocked.reason };
     }
