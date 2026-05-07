@@ -124,7 +124,7 @@ function ServiceCard({ service, index }: { service: Service; index: number }) {
       variants={cardVariants}
       initial="hidden"
       animate={isInView ? 'visible' : 'hidden'}
-      className="group relative bg-white/[0.03] border border-white/8 rounded-xl p-7 cursor-default
+      className="group relative bg-white/[0.03] border border-white/8 rounded-xl p-4 sm:p-7 cursor-default
                  hover:border-accent/30 hover:bg-white/[0.06] transition-all duration-400"
       whileHover={{ y: -3 }}
     >
@@ -133,23 +133,25 @@ function ServiceCard({ service, index }: { service: Service; index: number }) {
                       opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-full" />
 
       {/* Icon container */}
-      <div className="mb-6 w-14 h-14 rounded-lg border border-accent/20 bg-accent/5
+      <div className="mb-4 sm:mb-6 w-10 h-10 sm:w-14 sm:h-14 rounded-lg border border-accent/20 bg-accent/5
                       flex items-center justify-center transition-all duration-300
                       group-hover:border-accent/40 group-hover:bg-accent/10">
-        {service.icon}
+        <div className="scale-75 sm:scale-100">
+          {service.icon}
+        </div>
       </div>
 
       {/* Divider */}
       <motion.div
-        className="h-[1px] w-0 bg-accent/60 rounded-full mb-5"
-        animate={isInView ? { width: '2rem' } : { width: 0 }}
+        className="h-[1px] w-0 bg-accent/60 rounded-full mb-3 sm:mb-5"
+        animate={isInView ? { width: '1.5rem' } : { width: 0 }}
         transition={{ duration: 0.5, delay: index * 0.12 + 0.35 }}
       />
 
-      <h3 className={`text-white font-semibold text-lg tracking-wide mb-2 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+      <h3 className={`text-white font-semibold text-sm sm:text-lg tracking-wide mb-1 sm:mb-2 ${isRTL ? 'font-arabic' : 'font-english'}`}>
         {t(`services.items.${service.key}.name`)}
       </h3>
-      <p className={`text-white/40 text-sm leading-relaxed ${isRTL ? 'font-arabic' : 'font-english'}`}>
+      <p className={`text-white/40 text-[10px] sm:text-sm leading-relaxed line-clamp-3 ${isRTL ? 'font-arabic' : 'font-english'}`}>
         {t(`services.items.${service.key}.desc`)}
       </p>
 
@@ -199,8 +201,8 @@ export default function ServicesSection() {
           </div>
         </motion.div>
 
-        {/* Cards grid — 2×2 on md+, 1 col on mobile */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {/* Cards grid — 2×2 on mobile and md+ */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-5">
           {services.map((service, index) => (
             <ServiceCard key={service.key} service={service} index={index} />
           ))}
