@@ -59,7 +59,7 @@ export default function Navbar() {
           transition={{ duration: 0.5 }}
           aria-label={isRTL ? 'Switch to English' : 'التبديل إلى العربية'}
         >
-          <span className="text-base">{isRTL ? '🇬🇧' : '🇸🇦'}</span>
+          <span className="text-base">{isRTL ? '🇬🇧' : '🇪🇬'}</span>
           <span className={isRTL ? 'font-english' : 'font-arabic'}>
             {t('nav.langToggle')}
           </span>
