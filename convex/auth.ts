@@ -1,7 +1,6 @@
 import { mutation, action } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
-import { Resend } from "resend";
 
 export const generateOtp = mutation({
   args: {
@@ -36,45 +35,7 @@ export const generateOtp = mutation({
   },
 });
 
-export const sendOtpEmail = action({
-  args: {
-    email: v.string(),
-    phone: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const { code } = await ctx.runMutation(api.auth.generateOtp, {
-      email: args.email,
-      phone: args.phone,
-    });
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    if (!resendApiKey) {
-      console.warn(`[DEV] No RESEND_API_KEY found. OTP for ${args.email}: ${code}`);
-      return; // Mock success in dev if no key
-    }
-
-    const resend = new Resend(resendApiKey);
-
-    try {
-      await resend.emails.send({
-        from: "Amr Salah _ Barber Shop <onboarding@resend.dev>",
-        to: args.email,
-        subject: "Your BarberPro Verification Code",
-        html: `
-          <div dir="rtl" style="font-family: Arial, sans-serif; text-align: right;">
-            <h2>كود التحقق الخاص بك</h2>
-            <p>مرحباً، كود التحقق الخاص بك هو:</p>
-            <h1 style="color: #4A90E2; letter-spacing: 5px;">${code}</h1>
-            <p>هذا الكود صالح لمدة 5 دقائق فقط.</p>
-          </div>
-        `,
-      });
-    } catch (e) {
-      console.error("Failed to send OTP email:", e);
-      throw new Error("Failed to send OTP email");
-    }
-  },
-});
 
 export const verifyOtp = mutation({
   args: {

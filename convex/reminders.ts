@@ -1,7 +1,56 @@
 "use node";
 import { action } from "./_generated/server";
+import { api } from "./_generated/api";
 import { v } from "convex/values";
-import { Resend } from "resend";
+import nodemailer from "nodemailer";
+
+export const sendOtpEmail = action({
+  args: {
+    email: v.string(),
+    phone: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { code } = await ctx.runMutation(api.auth.generateOtp, {
+      email: args.email,
+      phone: args.phone,
+    });
+
+    const gmailUser = process.env.GMAIL_USER;
+    const gmailPass = process.env.GMAIL_PASS;
+
+    if (!gmailUser || !gmailPass) {
+      console.warn(`[DEV] No GMAIL_USER/PASS found. OTP for ${args.email}: ${code}`);
+      return; 
+    }
+
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: gmailUser,
+        pass: gmailPass,
+      },
+    });
+
+    try {
+      await transporter.sendMail({
+        from: `"Amr Salah _ Barber Shop" <${gmailUser}>`,
+        to: args.email,
+        subject: "Your BarberPro Verification Code",
+        html: `
+          <div dir="rtl" style="font-family: Arial, sans-serif; text-align: right;">
+            <h2>كود التحقق الخاص بك</h2>
+            <p>مرحباً، كود التحقق الخاص بك هو:</p>
+            <h1 style="color: #4A90E2; letter-spacing: 5px;">${code}</h1>
+            <p>هذا الكود صالح لمدة 5 دقائق فقط.</p>
+          </div>
+        `,
+      });
+    } catch (e) {
+      console.error("Failed to send OTP email:", e);
+      throw new Error("Failed to send OTP email");
+    }
+  },
+});
 
 export const sendReminder = action({
   args: {
@@ -15,12 +64,21 @@ export const sendReminder = action({
 
     // Send Email Notification
     if (args.email) {
-      const resendApiKey = process.env.RESEND_API_KEY;
-      if (resendApiKey) {
-        const resend = new Resend(resendApiKey);
+      const gmailUser = process.env.GMAIL_USER;
+      const gmailPass = process.env.GMAIL_PASS;
+
+      if (gmailUser && gmailPass) {
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: gmailUser,
+            pass: gmailPass,
+          },
+        });
+
         try {
-          await resend.emails.send({
-            from: "Amr Salah _ Barber Shop <onboarding@resend.dev>",
+          await transporter.sendMail({
+            from: `"Amr Salah _ Barber Shop" <${gmailUser}>`,
             to: args.email,
             subject: args.title,
             html: `
@@ -41,6 +99,8 @@ export const sendReminder = action({
         } catch (error) {
           console.error("Error sending email reminder:", error);
         }
+      } else {
+        console.warn("GMAIL_USER or GMAIL_PASS not set in environment variables.");
       }
     }
 

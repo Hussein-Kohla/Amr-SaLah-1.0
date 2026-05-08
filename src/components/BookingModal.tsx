@@ -49,7 +49,8 @@ function validate(data: FormData, t: TFunction): FormErrors {
   if (!EGYPT_PHONE_REGEX.test(data.phone.replace(/\s/g, ''))) {
     errors.phone = t('modal.phoneInvalid')
   }
-  if (!data.email.trim().toLowerCase().endsWith('@gmail.com')) {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(data.email.trim().toLowerCase())) {
     errors.email = t('modal.emailInvalid')
   }
   return errors
@@ -80,16 +81,7 @@ export default function BookingModal({
   const { t, i18n } = useTranslation()
   const isRTL = i18n.language === 'ar'
 
-  const [form, setForm] = useState<FormData>(() => {
-    const saved = localStorage.getItem('barberpro_booking_form')
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved)
-        return { ...parsed, otp: '' } // Never persist OTP
-      } catch (e) { /* ignore */ }
-    }
-    return { name: '', age: '', phone: '', email: '', otp: '' }
-  })
+  const [form, setForm] = useState<FormData>({ name: '', age: '', phone: '', email: '', otp: '' })
   const [errors, setErrors] = useState<FormErrors>({})
   const [modalState, setModalState] = useState<ModalState>('form')
   const [serverError, setServerError] = useState('')
@@ -99,14 +91,10 @@ export default function BookingModal({
 
   const createAppointment = useMutation(api.appointments.createAppointment)
 
-  const sendOtpEmail = useAction(api.auth.sendOtpEmail)
+  const sendOtpEmail = useAction(api.reminders.sendOtpEmail)
   const verifyOtp = useMutation(api.auth.verifyOtp)
 
-  // T-52: Save to localStorage when form changes
-  useEffect(() => {
-    const { otp, ...dataToSave } = form
-    localStorage.setItem('barberpro_booking_form', JSON.stringify(dataToSave))
-  }, [form])
+
 
 
 
@@ -185,7 +173,7 @@ export default function BookingModal({
       setModalState('success')
 
 
-      localStorage.removeItem('barberpro_booking_form')
+
       onConfirmed()
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
