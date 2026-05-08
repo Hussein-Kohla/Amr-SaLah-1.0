@@ -226,7 +226,7 @@ export const createAppointment = mutation({
           email: args.customerEmail,
           customerName: args.customerName,
           title: "⏰ تذكير بموعد حلاقتك - صالون عمرو صلاح",
-          body: `باقي 15 دقيقة على موعد حجزك (${args.timeSlot}) يوم ${args.date}. ننتظرك بكل حب!`,
+          body: `باقي 15 دقيقة على موعد حجزك (${args.timeSlot}) يوم ${args.date}. ننتظرك!`,
         });
       }
     }
