@@ -394,9 +394,23 @@ export default function BookingModal({
                     </button>
                   </div>
                   
-                  <p className={`text-surface/60 text-sm mb-6 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                  <p className={`text-surface/60 text-sm mb-4 ${isRTL ? 'font-arabic' : 'font-english'}`}>
                     {t('modal.otpSubtitle')}
                   </p>
+
+                  <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 mb-6 space-y-3">
+                    <p className="text-accent text-[13px] font-arabic text-right leading-relaxed">
+                      إذا لم تجد الكود في قائمة البريد الوارد، يرجى الضغط على القائمة الرئيسية واختيار <b>"المهمة"</b> أو <b>"كل البريد"</b>.
+                    </p>
+                    <div className="h-[1px] bg-accent/10 w-full" />
+                    <p className="text-accent/80 text-[11px] font-arabic text-right leading-relaxed">
+                      إذا لم تجد الكود في قائمة الـ <b>"inbox"</b>، يرجى الضغط على القائمة الرئيسية واختيار <b>"Important"</b> أو <b>"Spam"</b> أو <b>"All mail"</b>.
+                    </p>
+                    <div className="h-[1px] bg-accent/10 w-full" />
+                    <p className="text-accent/60 text-[10px] font-arabic text-center">
+                      الكود صالح لمدة 15 دقيقة فقط
+                    </p>
+                  </div>
 
                   <form onSubmit={handleOtpSubmit} className="space-y-4">
                     <div>
@@ -409,7 +423,7 @@ export default function BookingModal({
                         value={form.otp}
                         onChange={(e) => setForm({ ...form, otp: e.target.value.replace(/\D/g, '') })}
                         placeholder={t('modal.otpPlaceholder')}
-                        className={`text-center tracking-widest text-2xl font-bold ${inputClass(!!errors.otp)}`}
+                        className={`text-center tracking-widest text-3xl font-bold py-6 ${inputClass(!!errors.otp)}`}
                         dir="ltr"
                         autoComplete="one-time-code"
                       />

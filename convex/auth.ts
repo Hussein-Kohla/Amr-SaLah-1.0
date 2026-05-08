@@ -21,7 +21,7 @@ export const generateOtp = mutation({
 
     // Generate 6 digit OTP
     const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
+    const expiresAt = Date.now() + 15 * 60 * 1000; // 15 minutes
 
     const otpId = await ctx.db.insert("otps", {
       email: args.email,

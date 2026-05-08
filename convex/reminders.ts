@@ -36,12 +36,17 @@ export const sendOtpEmail = action({
         from: `"Amr Salah _ Barber Shop" <${gmailUser}>`,
         to: args.email,
         subject: "Your BarberPro Verification Code",
+        text: `كود التحقق الخاص بك\nمرحباً، كود التحقق الخاص بك هو:\n\n${code}\n----------------------------------------------------------`,
         html: `
-          <div dir="rtl" style="font-family: Arial, sans-serif; text-align: right;">
-            <h2>كود التحقق الخاص بك</h2>
-            <p>مرحباً، كود التحقق الخاص بك هو:</p>
-            <h1 style="color: #4A90E2; letter-spacing: 5px;">${code}</h1>
-            <p>هذا الكود صالح لمدة 5 دقائق فقط.</p>
+          <div dir="rtl" style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: right; background: #0f0f1a; color: #ffffff; padding: 40px; border-radius: 20px; border: 1px solid #c8a050; max-width: 600px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h2 style="color: #c8a050; margin: 0; font-size: 24px;">كود التحقق الخاص بك</h2>
+              <p style="color: #888; margin-top: 5px;">Your Verification Code</p>
+            </div>
+            
+            <div style="background: rgba(200, 160, 80, 0.1); padding: 30px; border-radius: 15px; text-align: center; border: 1px dashed #c8a050;">
+              <h1 style="color: #c8a050; letter-spacing: 10px; font-size: 42px; margin: 0;">${code}</h1>
+            </div>
           </div>
         `,
       });
