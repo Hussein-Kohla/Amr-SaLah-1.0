@@ -14,6 +14,7 @@ import type * as auth from "../auth.js";
 import type * as barbers from "../barbers.js";
 import type * as blacklist from "../blacklist.js";
 import type * as blocks from "../blocks.js";
+import type * as http from "../http.js";
 import type * as reminders from "../reminders.js";
 import type * as seed from "../seed.js";
 
@@ -30,6 +31,7 @@ declare const fullApi: ApiFromModules<{
   barbers: typeof barbers;
   blacklist: typeof blacklist;
   blocks: typeof blocks;
+  http: typeof http;
   reminders: typeof reminders;
   seed: typeof seed;
 }>;

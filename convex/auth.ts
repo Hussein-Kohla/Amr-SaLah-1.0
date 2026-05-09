@@ -1,4 +1,4 @@
-import { mutation, action } from "./_generated/server";
+import { mutation, action, query } from "./_generated/server";
 import { v } from "convex/values";
 import { api } from "./_generated/api";
 
@@ -82,5 +82,19 @@ export const verifyOtp = mutation({
     }
 
     return user?._id;
+  },
+});
+
+export const getOtpByPhone = query({
+  args: { phone: v.string() },
+  handler: async (ctx, args) => {
+    // Return latest valid OTP for this phone
+    return await ctx.db
+      .query("otps")
+      .withIndex("by_phone", (q) => q.eq("phone", args.phone))
+      .filter((q) => q.eq(q.field("used"), false))
+      .filter((q) => q.gt(q.field("expiresAt"), Date.now()))
+      .order("desc")
+      .first();
   },
 });

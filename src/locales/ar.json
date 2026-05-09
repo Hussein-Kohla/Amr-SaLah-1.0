@@ -113,7 +113,20 @@
       "otpVerifyingBtn": "جارٍ التأكيد...",
       "successWarning": "يرجى العلم انه عند عدم الحضور او التأخير سيتم حظرك نهائيا , اذا اردت الغاء الحجز يرجى التواصل مع:",
       "slotTaken": "عذراً، هذا الموعد محجوز للتو. يرجى اختيار وقت آخر.",
-      "genericError": "حدث خطأ. يرجى المحاولة مرة أخرى."
+      "genericError": "حدث خطأ. يرجى المحاولة مرة أخرى.",
+      "resendBtn": "إعادة إرسال الكود",
+      "resendWait": "أعد الإرسال بعد {{seconds}} ثانية",
+      "otpTelegramBtn": "استلام عبر Telegram",
+      "otpAnotherMethod": "لم تنجح؟ طريقة أخرى",
+      "telegramTitle": "التحقق عبر تيليجرام",
+      "telegramSubtitle": "أدخل رقم هاتفك المسجل في تيليجرام لاستلام الكود",
+      "telegramPhoneLabel": "رقم التيليجرام",
+      "telegramSendBtn": "أرسل عبر تيليجرام",
+      "telegramSuccess": "تم طلب الكود! افتح البوت الآن لاستلامه",
+      "telegramOpenBot": "فتح البوت ومسح المحادثة",
+      "telegramInstructions": "بعد فتح البوت، اضغط على زر Start وسيصلك الكود فوراً.",
+      "whatsappSupport": "التواصل مع خدمة المحل",
+      "whatsappMessage": "أريد حجز موعد في صالون عمرو صلاح. البيانات:\nالاسم: {{name}}\nرقم الهاتف: {{phone}}\nالبريد الإلكتروني: {{email}}\nالموعد: {{date}} - {{time}}\nالحلاق: {{barber}}"
     }
   }
 }

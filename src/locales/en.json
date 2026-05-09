@@ -113,7 +113,20 @@
       "otpVerifyingBtn": "Verifying...",
       "successWarning": "Please note that in case of no-show or delay, you will be permanently blocked. If you want to cancel your booking, please contact us via WhatsApp:",
       "slotTaken": "Sorry, this slot was just booked. Please choose another time.",
-      "genericError": "Something went wrong. Please try again."
+      "genericError": "Something went wrong. Please try again.",
+      "resendBtn": "Resend Code",
+      "resendWait": "Resend in {{seconds}}s",
+      "otpTelegramBtn": "Receive via Telegram",
+      "otpAnotherMethod": "Didn't work? Another way",
+      "telegramTitle": "Telegram Verification",
+      "telegramSubtitle": "Enter your Telegram phone number to receive the code",
+      "telegramPhoneLabel": "Telegram Number",
+      "telegramSendBtn": "Send via Telegram",
+      "telegramSuccess": "Code requested! Open the bot to receive it",
+      "telegramOpenBot": "Open Bot",
+      "telegramInstructions": "After opening the bot, press Start to get your code immediately.",
+      "whatsappSupport": "Contact Shop Support",
+      "whatsappMessage": "I want to book an appointment at Amr Salah Salon. Details:\nName: {{name}}\nPhone: {{phone}}\nEmail: {{email}}\nDate: {{date}} - {{time}}\nBarber: {{barber}}"
     }
   }
 }

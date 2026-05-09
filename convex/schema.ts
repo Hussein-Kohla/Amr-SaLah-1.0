@@ -15,7 +15,9 @@ export default defineSchema({
     code: v.string(),
     expiresAt: v.number(),
     used: v.boolean(),
-  }).index("by_email_code", ["email", "code"]),
+  })
+    .index("by_email_code", ["email", "code"])
+    .index("by_phone", ["phone"]),
 
   barbers: defineTable({
     nameAr: v.string(),
