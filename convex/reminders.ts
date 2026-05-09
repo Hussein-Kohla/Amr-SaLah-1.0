@@ -11,7 +11,7 @@ export const sendOtpEmail = action({
   },
   handler: async (ctx, args) => {
     if (!args.email.toLowerCase().endsWith("@gmail.com")) {
-      throw new Error("ONLY_GMAIL_ALLOWED");
+      return { success: false, error: "ONLY_GMAIL_ALLOWED" };
     }
     const { code } = await ctx.runMutation(api.auth.generateOtp, {
       email: args.email,
@@ -57,6 +57,8 @@ export const sendOtpEmail = action({
       console.error("Failed to send OTP email:", e);
       throw new Error("Failed to send OTP email");
     }
+
+    return { success: true };
   },
 });
 

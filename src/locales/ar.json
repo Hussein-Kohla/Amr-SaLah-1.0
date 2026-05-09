@@ -103,7 +103,7 @@
       "phoneInvalid": "رقم الهاتف غير صحيح (يجب أن يكون 11 رقماً ويبدأ بـ 010، 011، 012 أو 015)",
       "emailLabel": "البريد الإلكتروني",
       "emailPlaceholder": "مثال: example@gmail.com",
-      "emailInvalid": "يجب أن يكون البريد الإلكتروني @gmail.com",
+      "emailInvalid": "❌ خطأ: يجب استخدام بريد Gmail فقط (example@gmail.com)",
       "otpTitle": "رمز التحقق",
       "otpSubtitle": "لقد أرسلنا رمزاً من 6 أرقام إلى بريدك الإلكتروني",
       "otpLabel": "أدخل الرمز",

@@ -103,7 +103,7 @@
       "phoneInvalid": "Invalid phone number (must be 11 digits, starting with 010, 011, 012, or 015)",
       "emailLabel": "Email Address",
       "emailPlaceholder": "e.g. example@gmail.com",
-      "emailInvalid": "Email must be a valid @gmail.com address",
+      "emailInvalid": "❌ Error: Only @gmail.com addresses are allowed",
       "otpTitle": "Verification Code",
       "otpSubtitle": "We sent a 6-digit code to your email",
       "otpLabel": "Enter Code",

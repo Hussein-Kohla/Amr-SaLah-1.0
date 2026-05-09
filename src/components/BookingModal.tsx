@@ -52,6 +52,8 @@ function validate(data: FormData, t: TFunction): FormErrors {
   const emailTrimmed = data.email.trim().toLowerCase()
   if (!emailTrimmed.endsWith('@gmail.com')) {
     errors.email = t('modal.emailInvalid')
+  } else if (emailTrimmed.split('@').length !== 2 || emailTrimmed.split('@')[0].length < 1) {
+    errors.email = t('modal.emailInvalid')
   }
   return errors
 }
@@ -133,10 +135,20 @@ export default function BookingModal({
     setErrors({})
     setModalState('loading')
     try {
-      await sendOtpEmail({
+      const result = await sendOtpEmail({
         email: form.email.trim().toLowerCase(),
         phone: form.phone.replace(/\s/g, ''),
       })
+      
+      if (result && !result.success) {
+        if (result.error === 'ONLY_GMAIL_ALLOWED') {
+          setErrors({ email: t('modal.emailInvalid') })
+          setModalState('form')
+          return
+        }
+        throw new Error(result.error)
+      }
+
       setModalState('otp')
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
@@ -572,6 +584,12 @@ export default function BookingModal({
                         dir="ltr"
                         autoComplete="email"
                         aria-invalid={!!errors.email}
+                        pattern="^[a-zA-Z0-9._%+-]+@gmail\.com$"
+                        onBlur={() => {
+                          if (form.email && !form.email.trim().toLowerCase().endsWith('@gmail.com')) {
+                            setErrors(prev => ({ ...prev, email: t('modal.emailInvalid') }))
+                          }
+                        }}
                       />
                       {errors.email && (
                         <motion.p
