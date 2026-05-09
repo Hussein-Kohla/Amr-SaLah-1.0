@@ -453,9 +453,23 @@ export default function BookingModal({
                   </p>
 
                   <div className="bg-accent/5 border border-accent/20 rounded-xl p-4 mb-6 space-y-3">
-                    <p className="text-accent text-[13px] font-arabic text-right leading-relaxed">
-                      إذا لم تجد الكود في قائمة البريد الوارد، يرجى الضغط على القائمة الرئيسية واختيار <b>"المهمة"</b> أو <b>"كل البريد"</b>.
-                    </p>
+                    {/* Row 1: Gmail icon + Arabic tip */}
+                    <div className="flex items-start gap-3 flex-row-reverse">
+                      {/* Gmail icon */}
+                      <div className="flex-shrink-0 mt-0.5">
+                        <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <rect width="48" height="48" rx="8" fill="#ffffff10"/>
+                          {/* Gmail M shape */}
+                          <path d="M8 14v20h6V21.6L24 31l10-9.4V34h6V14l-16 14L8 14z" fill="#EA4335"/>
+                          <path d="M8 14l16 14L40 14" fill="none" stroke="#FBBC05" strokeWidth="2"/>
+                          <path d="M14 34H8V14" fill="#34A853"/>
+                          <path d="M34 34h6V14" fill="#4285F4"/>
+                        </svg>
+                      </div>
+                      <p className="text-accent text-[13px] font-arabic text-right leading-relaxed flex-1">
+                        إذا لم تجد الكود في قائمة البريد الوارد، يرجى الضغط على <b>القائمة الرئيسية ☰</b> واختيار <b>"المهمة"</b> أو <b>"كل البريد"</b>.
+                      </p>
+                    </div>
                     <div className="h-[1px] bg-accent/10 w-full" />
                     <p className="text-accent/80 text-[11px] font-arabic text-right leading-relaxed">
                       إذا لم تجد الكود في قائمة الـ <b>"inbox"</b>، يرجى الضغط على القائمة الرئيسية واختيار <b>"Important"</b> أو <b>"Spam"</b> أو <b>"All mail"</b>.
@@ -683,6 +697,60 @@ export default function BookingModal({
                       {t('modal.telegramOpenBot')}
                     </a>
                   </div>
+
+                  {/* OTP input - same as main screen - shown after bot is opened */}
+                  <AnimatePresence>
+                    {isTelegramRequested && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-3"
+                      >
+                        <div className="h-[1px] bg-white/10 w-full" />
+                        <p className={`text-blue-300 text-xs text-center font-bold ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                          {isRTL ? '📲 وصلك الكود؟ أدخله هنا مباشرةً' : '📲 Got the code? Enter it here directly'}
+                        </p>
+                        <form onSubmit={handleOtpSubmit} className="space-y-3">
+                          <div>
+                            <label className={`block text-surface/60 text-xs mb-1.5 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                              {t('modal.otpLabel')}
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={6}
+                              value={form.otp}
+                              onChange={(e) => setForm({ ...form, otp: e.target.value.replace(/\D/g, '') })}
+                              placeholder={t('modal.otpPlaceholder')}
+                              className={`text-center tracking-widest text-3xl font-bold py-6 ${inputClass(!!errors.otp)}`}
+                              dir="ltr"
+                              autoComplete="one-time-code"
+                            />
+                            {errors.otp && (
+                              <motion.p
+                                initial={{ opacity: 0, y: -4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className={`text-red-400 text-xs mt-1.5 ${isRTL ? 'font-arabic' : 'font-english'}`}
+                              >
+                                {errors.otp}
+                              </motion.p>
+                            )}
+                          </div>
+                          <motion.button
+                            type="submit"
+                            disabled={form.otp.length !== 6}
+                            className={`
+                              w-full py-3.5 rounded-xl font-bold text-primary
+                              ${form.otp.length !== 6 ? 'bg-accent/60 cursor-not-allowed' : 'bg-accent cursor-pointer hover:brightness-110'}
+                              transition-all duration-200
+                              ${isRTL ? 'font-arabic' : 'font-english'}
+                            `}
+                          >
+                            {t('modal.otpVerifyBtn')}
+                          </motion.button>
+                        </form>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
 
                   <button
                     onClick={() => setModalState('otp')}
