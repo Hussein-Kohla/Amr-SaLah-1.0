@@ -28,7 +28,7 @@ export default defineSchema({
     isActive: v.boolean(),
   }),
 
-  appointments: defineTable({
+  bookings: defineTable({
     barberId: v.id("barbers"),
     userId: v.optional(v.id("users")),
     date: v.string(),
@@ -67,7 +67,7 @@ export default defineSchema({
 
   pushSubscriptions: defineTable({
     userId: v.optional(v.id("users")),
-    appointmentId: v.optional(v.id("appointments")),
+    appointmentId: v.optional(v.any()),
     subscription: v.any(), // JSON string or object from PushSubscription
     createdAt: v.number(),
   }).index("by_user", ["userId"]),

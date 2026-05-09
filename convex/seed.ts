@@ -37,7 +37,7 @@ export const seedBarbers = mutation({
     const todayStr = today.toISOString().split("T")[0];
 
     // Add some sample booked appointments for today
-    await ctx.db.insert("appointments", {
+    await ctx.db.insert("bookings", {
       barberId: barber1,
       date: todayStr,
       timeSlot: "10:00",
@@ -48,7 +48,7 @@ export const seedBarbers = mutation({
       createdAt: Date.now(),
     });
 
-    await ctx.db.insert("appointments", {
+    await ctx.db.insert("bookings", {
       barberId: barber1,
       date: todayStr,
       timeSlot: "14:00",
@@ -59,7 +59,7 @@ export const seedBarbers = mutation({
       createdAt: Date.now(),
     });
 
-    await ctx.db.insert("appointments", {
+    await ctx.db.insert("bookings", {
       barberId: barber2,
       date: todayStr,
       timeSlot: "11:00",
@@ -70,7 +70,7 @@ export const seedBarbers = mutation({
       createdAt: Date.now(),
     });
 
-    await ctx.db.insert("appointments", {
+    await ctx.db.insert("bookings", {
       barberId: barber3,
       date: todayStr,
       timeSlot: "15:00",
@@ -81,6 +81,6 @@ export const seedBarbers = mutation({
       createdAt: Date.now(),
     });
 
-    return "Seeded 3 barbers and 4 sample appointments";
+    return "Seeded 3 barbers and 4 sample bookings";
   },
 });

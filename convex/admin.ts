@@ -19,7 +19,7 @@ export const login = mutation({
 
 export const getAppointments = query({
   handler: async (ctx) => {
-    const appointments = await ctx.db.query("appointments").order("desc").collect();
+    const appointments = await ctx.db.query("bookings").order("desc").collect();
     const barbers = await ctx.db.query("barbers").collect();
     
     const barbersMap = new Map(barbers.map(b => [b._id.toString(), b]));
@@ -33,7 +33,7 @@ export const getAppointments = query({
 
 export const updateAppointmentStatus = mutation({
   args: { 
-    id: v.id("appointments"),
+    id: v.id("bookings"),
     status: v.union(v.literal("available"), v.literal("booked"), v.literal("blocked"), v.literal("confirmed"))
   },
   handler: async (ctx, args) => {
@@ -42,7 +42,7 @@ export const updateAppointmentStatus = mutation({
 });
 
 export const deleteAppointment = mutation({
-  args: { id: v.id("appointments") },
+  args: { id: v.id("bookings") },
   handler: async (ctx, args) => {
     await ctx.db.delete(args.id);
   },

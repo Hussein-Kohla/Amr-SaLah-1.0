@@ -11,7 +11,7 @@ import AdminBlacklistManager from '../components/AdminBlacklistManager'
 // ─── Types ───────────────────────────────────────────────────────────────────
 type SnackType = 'success' | 'error'
 interface SnackItem { id: number; type: SnackType; title: string; message: string }
-interface ConfirmTarget { id: Id<'appointments'>; label: string }
+interface ConfirmTarget { id: Id<'bookings'>; label: string }
 
 // ─── Snackbar ────────────────────────────────────────────────────────────────
 function Snackbar({ item, onClose }: { item: SnackItem; onClose: (id: number) => void }) {
@@ -239,12 +239,12 @@ export default function AdminPage() {
 
   const handleLogout = () => { sessionStorage.removeItem('adminAuth'); setIsAuthenticated(false); navigate('/') }
 
-  const handleConfirm = async (id: Id<'appointments'>) => {
+  const handleConfirm = async (id: Id<'bookings'>) => {
     await updateStatus({ id, status: 'confirmed' })
     addSnack('success', isRTL ? 'تم التأكيد ✓' : 'Confirmed ✓', isRTL ? 'تم تأكيد الحجز بنجاح' : 'Appointment confirmed successfully')
   }
 
-  const handleCancel = (id: Id<'appointments'>, name: string) => {
+  const handleCancel = (id: Id<'bookings'>, name: string) => {
     setConfirmTarget({ id, label: isRTL ? `هل تريد إلغاء حجز "${name}"؟` : `Remove "${name}"'s appointment?` })
   }
 

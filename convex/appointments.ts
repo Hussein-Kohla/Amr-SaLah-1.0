@@ -40,7 +40,7 @@ export const getSlots = query({
 
     // Get existing appointments for this barber on this date
     const appointments = await ctx.db
-      .query("appointments")
+      .query("bookings")
       .withIndex("by_barber_date", (q) =>
         q.eq("barberId", barberId).eq("date", date)
       )
@@ -175,7 +175,7 @@ export const createAppointment = mutation({
   handler: async (ctx, args) => {
     // Check if slot is still available
     const existing = await ctx.db
-      .query("appointments")
+      .query("bookings")
       .withIndex("by_barber_date", (q) =>
         q.eq("barberId", args.barberId).eq("date", args.date)
       )
@@ -189,6 +189,10 @@ export const createAppointment = mutation({
     // Check if customer is blocked by email or phone
     const emailToCheck = args.customerEmail?.trim().toLowerCase();
     const phoneToCheck = args.customerPhone.replace(/\s/g, '');
+
+    if (emailToCheck && !emailToCheck.endsWith("@gmail.com")) {
+      throw new Error("ONLY_GMAIL_ALLOWED");
+    }
 
     const isBlocked = await ctx.db
       .query("userBlacklist")
@@ -204,7 +208,7 @@ export const createAppointment = mutation({
       throw new Error("USER_BLOCKED");
     }
 
-    const id = await ctx.db.insert("appointments", {
+    const id = await ctx.db.insert("bookings", {
       barberId: args.barberId,
       date: args.date,
       timeSlot: args.timeSlot,

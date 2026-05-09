@@ -49,8 +49,8 @@ function validate(data: FormData, t: TFunction): FormErrors {
   if (!EGYPT_PHONE_REGEX.test(data.phone.replace(/\s/g, ''))) {
     errors.phone = t('modal.phoneInvalid')
   }
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-  if (!emailRegex.test(data.email.trim().toLowerCase())) {
+  const emailTrimmed = data.email.trim().toLowerCase()
+  if (!emailTrimmed.endsWith('@gmail.com')) {
     errors.email = t('modal.emailInvalid')
   }
   return errors
@@ -140,8 +140,13 @@ export default function BookingModal({
       setModalState('otp')
     } catch (err) {
       const msg = err instanceof Error ? err.message : ''
-      setServerError(msg || t('modal.genericError'))
-      setModalState('error')
+      if (msg.includes('ONLY_GMAIL_ALLOWED')) {
+        setErrors({ email: t('modal.emailInvalid') })
+        setModalState('form')
+      } else {
+        setServerError(msg || t('modal.genericError'))
+        setModalState('error')
+      }
     }
   }
 
@@ -185,6 +190,9 @@ export default function BookingModal({
           ? 'تم حظرك من الموقع. يرجى التواصل مع الإدارة عبر الواتساب: 01000823374' 
           : 'You have been blocked from this site. Please contact admin via WhatsApp: 01000823374')
         setModalState('error')
+      } else if (msg.includes('ONLY_GMAIL_ALLOWED')) {
+        setErrors({ email: t('modal.emailInvalid') })
+        setModalState('form')
       } else {
         setServerError(msg.includes('SLOT_TAKEN') ? t('modal.slotTaken') : t('modal.genericError'))
         setModalState('error')

@@ -10,6 +10,9 @@ export const sendOtpEmail = action({
     phone: v.string(),
   },
   handler: async (ctx, args) => {
+    if (!args.email.toLowerCase().endsWith("@gmail.com")) {
+      throw new Error("ONLY_GMAIL_ALLOWED");
+    }
     const { code } = await ctx.runMutation(api.auth.generateOtp, {
       email: args.email,
       phone: args.phone,
