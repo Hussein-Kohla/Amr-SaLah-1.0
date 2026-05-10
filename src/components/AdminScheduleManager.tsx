@@ -23,9 +23,20 @@ export default function AdminScheduleManager({ selectedDate, onDateChange, isRTL
   const blocks = useQuery(api.blocks.getBlocks, selectedDate && selectedBarberId ? { date: selectedDate, barberId: selectedBarberId } : 'skip')
   const toggleBlock = useMutation(api.blocks.toggleBlock)
   const slots = useQuery(api.appointments.getSlots, selectedDate && selectedBarberId ? { date: selectedDate, barberId: selectedBarberId } : 'skip')
+  const adminCreateAppt = useMutation(api.admin.adminCreateAppointment)
+
+  const [adminMode, setAdminMode] = useState<'cancel' | 'manual'>('cancel')
+  const [manualBookingTarget, setManualBookingTarget] = useState<string | null>(null)
+  const [manualForm, setManualForm] = useState({ name: '', age: '', phone: '', email: '' })
+  const [isBooking, setIsBooking] = useState(false)
 
   const handleToggle = async (type: 'day' | 'slot', slot?: string) => {
     if (!selectedBarberId || !selectedDate) return
+
+    if (adminMode === 'manual' && type === 'slot' && slot) {
+      setManualBookingTarget(slot)
+      return
+    }
 
     const isCurrentlyBlocked = type === 'day' 
       ? blocks?.some(b => !b.timeSlot)
@@ -35,6 +46,32 @@ export default function AdminScheduleManager({ selectedDate, onDateChange, isRTL
       setConfirmTarget({ type, barberId: selectedBarberId, slot })
     } else {
       await doToggle(type, slot)
+    }
+  }
+
+  const handleManualBook = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedBarberId || !selectedDate || !manualBookingTarget) return
+    setIsBooking(true)
+    try {
+      await adminCreateAppt({
+        barberId: selectedBarberId,
+        date: selectedDate,
+        timeSlot: manualBookingTarget,
+        customerName: manualForm.name.trim(),
+        customerAge: Number(manualForm.age),
+        customerPhone: manualForm.phone.trim(),
+        customerEmail: manualForm.email.trim() || undefined,
+      })
+      onSnack('success', isRTL ? 'تم الحجز' : 'Booked', isRTL ? 'تم إضافة الحجز اليدوي بنجاح' : 'Manual booking added successfully')
+      setManualBookingTarget(null)
+      setManualForm({ name: '', age: '', phone: '', email: '' })
+    } catch (err) {
+      console.error('Manual booking error:', err)
+      const msg = err instanceof Error ? err.message : String(err)
+      onSnack('error', isRTL ? 'خطأ' : 'Error', isRTL ? `فشل الحجز: ${msg}` : `Booking failed: ${msg}`)
+    } finally {
+      setIsBooking(false)
     }
   }
 
@@ -94,6 +131,24 @@ export default function AdminScheduleManager({ selectedDate, onDateChange, isRTL
           )}
         </AnimatePresence>
 
+        {/* Mode Selector */}
+        <div className="flex bg-white/5 rounded-2xl p-1 gap-1">
+          <button
+            onClick={() => setAdminMode('cancel')}
+            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all
+              ${adminMode === 'cancel' ? 'bg-accent text-primary shadow-lg shadow-accent/20' : 'text-white/40 hover:text-white/60'}`}
+          >
+            {isRTL ? 'الغاء مواعيد' : 'Cancel Slots'}
+          </button>
+          <button
+            onClick={() => setAdminMode('manual')}
+            className={`flex-1 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all
+              ${adminMode === 'manual' ? 'bg-accent text-primary shadow-lg shadow-accent/20' : 'text-white/40 hover:text-white/60'}`}
+          >
+            {isRTL ? 'اضيف حجز يدوي' : 'Manual Booking'}
+          </button>
+        </div>
+
         {/* Barber Select */}
         <div>
           <label className={`block text-white/40 text-[10px] uppercase font-black tracking-widest mb-2 ${isRTL ? 'font-arabic text-right' : 'font-english text-left'}`}>
@@ -147,25 +202,37 @@ export default function AdminScheduleManager({ selectedDate, onDateChange, isRTL
                       <button
                         key={s.time}
                         onClick={() => handleToggle('slot', s.time)}
-                        disabled={isBooked}
+                        disabled={adminMode === 'cancel' && isBooked}
                         className={`relative py-3 rounded-xl text-[10px] font-bold border transition-all flex flex-col items-center gap-1
                           ${isSlotBlocked 
-                            ? 'bg-red-600/20 border-red-600/40 text-red-400 shadow-inner' 
+                            ? 'bg-red-600/20 border-red-600/40 text-red-500 shadow-[inset_0_0_10px_rgba(220,38,38,0.1)]' 
                             : isBooked
-                              ? 'bg-red-500/5 border-white/5 text-white/20 cursor-not-allowed opacity-50'
+                              ? 'bg-red-500/10 border-red-500/20 text-red-400'
                               : isWaiting
-                                ? 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:bg-amber-500/20'
-                                : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20'}`}
+                                ? 'bg-amber-500/15 border border-amber-500/30 text-amber-400 hover:bg-amber-500/25'
+                                : 'bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25'}`}
                       >
                         <span className="truncate w-full px-1">
                           {isRTL ? (isWaiting ? s.time.replace('Waiting', 'انتظار') : s.time.replace(' AM','').replace(' PM','')) : s.time}
                         </span>
                         <div className={`w-1.5 h-1.5 rounded-full ${
-                          isSlotBlocked ? 'bg-red-500' :
-                          isBooked ? 'bg-white/10' :
-                          isWaiting ? 'bg-amber-500' : 'bg-emerald-500'
+                          isSlotBlocked ? 'bg-red-600 shadow-[0_0_5px_rgba(220,38,38,0.8)]' :
+                          isBooked ? 'bg-red-400/60' :
+                          isWaiting ? 'bg-amber-400' : 'bg-emerald-400'
                         }`} />
-                        {isSlotBlocked && <span className="absolute top-1 right-1 text-[8px]">✕</span>}
+                        {isSlotBlocked && (
+                          <>
+                            <span className="absolute top-1 right-2 text-[8px] font-bold">✕</span>
+                            <span className="absolute -bottom-0.5 inset-x-0 text-center text-[7px] font-bold text-red-500 uppercase">
+                              {isRTL ? 'مغلق' : 'Blocked'}
+                            </span>
+                          </>
+                        )}
+                        {isBooked && (
+                          <span className="absolute -bottom-0.5 inset-x-0 text-center text-[7px] font-bold text-red-400/60 uppercase">
+                            {isRTL ? 'محجوز' : 'Booked'}
+                          </span>
+                        )}
                       </button>
                     )
                   })}
@@ -207,6 +274,94 @@ export default function AdminScheduleManager({ selectedDate, onDateChange, isRTL
                   {isRTL ? 'نعم، إغلاق' : 'Yes, Block'}
                 </button>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Manual Booking Dialog */}
+      <AnimatePresence>
+        {manualBookingTarget && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-xl p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#0f0f1a] border border-white/10 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent" />
+              <h4 className={`text-white font-black text-xl mb-1 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                {isRTL ? 'حجز يدوي جديد' : 'New Manual Booking'}
+              </h4>
+              <p className={`text-white/40 text-xs mb-8 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                {isRTL ? `الموعد: ${manualBookingTarget} - ${selectedDate}` : `Slot: ${manualBookingTarget} - ${selectedDate}`}
+              </p>
+
+              <form onSubmit={handleManualBook} className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-white font-bold uppercase tracking-widest px-1 block">
+                    {isRTL ? 'اسم العميل' : 'Customer Name'}
+                  </label>
+                  <input
+                    required
+                    autoComplete="off"
+                    value={manualForm.name}
+                    onChange={e => setManualForm({...manualForm, name: e.target.value})}
+                    className="w-full bg-black/60 border border-white/10 rounded-2xl py-3 px-4 text-white text-sm outline-none focus:border-accent/50 transition-all shadow-inner"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-white font-bold uppercase tracking-widest px-1 block">
+                      {isRTL ? 'العمر' : 'Age'}
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      autoComplete="off"
+                      value={manualForm.age}
+                      onChange={e => setManualForm({...manualForm, age: e.target.value})}
+                      className="w-full bg-black/60 border border-white/10 rounded-2xl py-3 px-4 text-white text-sm outline-none focus:border-accent/50 transition-all shadow-inner"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-white font-bold uppercase tracking-widest px-1 block">
+                      {isRTL ? 'رقم الهاتف' : 'Phone'}
+                    </label>
+                    <input
+                      required
+                      autoComplete="off"
+                      value={manualForm.phone}
+                      onChange={e => setManualForm({...manualForm, phone: e.target.value})}
+                      className="w-full bg-black/60 border border-white/10 rounded-2xl py-3 px-4 text-white text-sm outline-none focus:border-accent/50 transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-white font-bold uppercase tracking-widest px-1 block">
+                    {isRTL ? 'البريد (اختياري للتذكير)' : 'Email (Optional)'}
+                  </label>
+                  <input
+                    type="email"
+                    autoComplete="off"
+                    value={manualForm.email}
+                    onChange={e => setManualForm({...manualForm, email: e.target.value})}
+                    className="w-full bg-black/60 border border-white/10 rounded-2xl py-3 px-4 text-white text-sm outline-none focus:border-accent/50 transition-all shadow-inner"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-4">
+                  <button type="button" onClick={() => setManualBookingTarget(null)}
+                    className="flex-1 py-4 rounded-2xl bg-white/5 text-white font-bold text-sm hover:bg-white/10 transition-all border border-white/10">
+                    {isRTL ? 'إلغاء' : 'Cancel'}
+                  </button>
+                  <button type="submit" disabled={isBooking}
+                    className="flex-1 py-4 rounded-2xl bg-accent text-primary font-black text-sm hover:brightness-110 transition-all shadow-lg shadow-accent/20 disabled:opacity-50">
+                    {isBooking ? (isRTL ? 'جاري...' : 'Booking...') : (isRTL ? 'تأكيد الحجز' : 'Confirm')}
+                  </button>
+                </div>
+              </form>
             </motion.div>
           </motion.div>
         )}

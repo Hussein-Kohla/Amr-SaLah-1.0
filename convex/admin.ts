@@ -47,3 +47,70 @@ export const deleteAppointment = mutation({
     await ctx.db.delete(args.id);
   },
 });
+
+export const adminCreateAppointment = mutation({
+  args: {
+    barberId: v.id("barbers"),
+    date: v.string(),
+    timeSlot: v.string(),
+    customerName: v.string(),
+    customerAge: v.number(),
+    customerPhone: v.string(),
+    customerEmail: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    // 1. Check for existing booking
+    const existingBooking = await ctx.db
+      .query("bookings")
+      .withIndex("by_barber_date", (q) =>
+        q.eq("barberId", args.barberId).eq("date", args.date)
+      )
+      .filter((q) => q.eq(q.field("timeSlot"), args.timeSlot))
+      .first();
+
+    if (existingBooking) {
+      await ctx.db.delete(existingBooking._id);
+    }
+
+    // 2. Check for existing block
+    const existingBlock = await ctx.db
+      .query("blocks")
+      .withIndex("by_barber_date", (q) =>
+        q.eq("barberId", args.barberId).eq("date", args.date)
+      )
+      .filter((q) => q.eq(q.field("timeSlot"), args.timeSlot))
+      .first();
+
+    if (existingBlock) {
+      await ctx.db.delete(existingBlock._id);
+    }
+
+    // 3. Create new confirmed booking
+    return await ctx.db.insert("bookings", {
+      barberId: args.barberId,
+      date: args.date,
+      timeSlot: args.timeSlot,
+      status: "confirmed",
+      customerName: args.customerName,
+      customerAge: args.customerAge,
+      customerPhone: args.customerPhone,
+      customerEmail: args.customerEmail,
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const updateAppointment = mutation({
+  args: {
+    id: v.id("bookings"),
+    barberId: v.optional(v.id("barbers")),
+    customerName: v.string(),
+    customerAge: v.number(),
+    customerPhone: v.string(),
+    customerEmail: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { id, ...data } = args;
+    await ctx.db.patch(id, data);
+  },
+});

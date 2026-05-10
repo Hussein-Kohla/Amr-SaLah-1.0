@@ -213,8 +213,19 @@ export default function AdminPage() {
 
   const loginMutation = useMutation(api.admin.login)
   const appointments  = useQuery(api.admin.getAppointments, isAuthenticated ? {} : 'skip')
+  const barbers       = useQuery(api.barbers.getBarbers)
   const updateStatus  = useMutation(api.admin.updateAppointmentStatus)
   const deleteAppt    = useMutation(api.admin.deleteAppointment)
+  const updateAppt    = useMutation(api.admin.updateAppointment)
+
+  const [editingAppt, setEditingAppt] = useState<{
+    id: Id<'bookings'>;
+    barberId: Id<'barbers'>;
+    name: string;
+    age: number;
+    phone: string;
+    email?: string;
+  } | null>(null)
 
   const addSnack = useCallback((type: SnackType, title: string, message: string) => {
     const id = Date.now()
@@ -253,6 +264,25 @@ export default function AdminPage() {
     await deleteAppt({ id: confirmTarget.id })
     addSnack('error', isRTL ? 'تم الإلغاء' : 'Cancelled', isRTL ? 'تم إلغاء الحجز بنجاح' : 'Appointment has been removed')
     setConfirmTarget(null)
+  }
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingAppt) return
+    try {
+      await updateAppt({
+        id: editingAppt.id,
+        barberId: editingAppt.barberId,
+        customerName: editingAppt.name.trim(),
+        customerAge: Number(editingAppt.age),
+        customerPhone: editingAppt.phone.trim(),
+        customerEmail: editingAppt.email?.trim() || undefined,
+      })
+      addSnack('success', isRTL ? 'تم التحديث' : 'Updated', isRTL ? 'تم تحديث بيانات الحجز بنجاح' : 'Appointment details updated successfully')
+      setEditingAppt(null)
+    } catch (err) {
+      addSnack('error', 'Error', 'Failed to update appointment')
+    }
   }
 
   // ── Login screen ──
@@ -384,6 +414,104 @@ export default function AdminPage() {
           onCancel={() => setConfirmTarget(null)}
         />
       )}
+
+      {/* Edit Dialog */}
+      <AnimatePresence>
+        {editingAppt && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-[#16161f] border border-white/10 rounded-[2.5rem] p-8 max-w-md w-full shadow-2xl relative overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-accent to-transparent" />
+              <h4 className={`text-white font-black text-xl mb-8 ${isRTL ? 'font-arabic' : 'font-english'}`}>
+                {isRTL ? 'تعديل بيانات الحجز' : 'Edit Appointment'}
+              </h4>
+
+              <form onSubmit={handleUpdate} className="space-y-5">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-white font-bold uppercase tracking-widest px-1 block">
+                    {isRTL ? 'اسم العميل' : 'Customer Name'}
+                  </label>
+                  <input
+                    required
+                    value={editingAppt.name}
+                    onChange={e => setEditingAppt({...editingAppt, name: e.target.value})}
+                    className="w-full bg-black/60 border border-white/10 rounded-2xl py-3 px-4 text-white text-sm outline-none focus:border-accent/50 transition-all shadow-inner"
+                  />
+                </div>
+
+                {/* Barber Selection */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-white font-bold uppercase tracking-widest px-1 block">
+                    {isRTL ? 'الحلاق' : 'Barber'}
+                  </label>
+                  <select
+                    value={editingAppt.barberId}
+                    onChange={e => setEditingAppt({...editingAppt, barberId: e.target.value as Id<'barbers'>})}
+                    className="w-full bg-black/60 border border-white/10 rounded-2xl py-3 px-4 text-white text-sm outline-none focus:border-accent/50 transition-all shadow-inner"
+                    style={{ colorScheme: 'dark' }}
+                  >
+                    {barbers?.map(b => (
+                      <option key={b._id} value={b._id}>{isRTL ? b.nameAr : b.nameEn}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-white font-bold uppercase tracking-widest px-1 block">
+                      {isRTL ? 'العمر' : 'Age'}
+                    </label>
+                    <input
+                      required
+                      type="number"
+                      value={editingAppt.age}
+                      onChange={e => setEditingAppt({...editingAppt, age: Number(e.target.value)})}
+                      className="w-full bg-black/60 border border-white/10 rounded-2xl py-3 px-4 text-white text-sm outline-none focus:border-accent/50 transition-all shadow-inner"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] text-white font-bold uppercase tracking-widest px-1 block">
+                      {isRTL ? 'رقم الهاتف' : 'Phone'}
+                    </label>
+                    <input
+                      required
+                      value={editingAppt.phone}
+                      onChange={e => setEditingAppt({...editingAppt, phone: e.target.value})}
+                      className="w-full bg-black/60 border border-white/10 rounded-2xl py-3 px-4 text-white text-sm outline-none focus:border-accent/50 transition-all shadow-inner"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] text-white font-bold uppercase tracking-widest px-1 block">
+                    {isRTL ? 'البريد الإلكتروني' : 'Email'}
+                  </label>
+                  <input
+                    type="email"
+                    value={editingAppt.email || ''}
+                    onChange={e => setEditingAppt({...editingAppt, email: e.target.value})}
+                    className="w-full bg-black/60 border border-white/10 rounded-2xl py-3 px-4 text-white text-sm outline-none focus:border-accent/50 transition-all shadow-inner"
+                  />
+                </div>
+
+                <div className="flex gap-4 pt-6">
+                  <button type="button" onClick={() => setEditingAppt(null)}
+                    className="flex-1 py-4 rounded-2xl bg-white/5 text-white font-bold text-sm hover:bg-white/10 transition-all border border-white/10">
+                    {isRTL ? 'تراجع' : 'Cancel'}
+                  </button>
+                  <button type="submit"
+                    className="flex-1 py-4 rounded-2xl bg-accent text-primary font-black text-sm hover:brightness-110 transition-all shadow-lg shadow-accent/20">
+                    {isRTL ? 'حفظ التعديلات' : 'Save Changes'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="p-4 sm:p-8">
         {/* Header */}
@@ -562,10 +690,10 @@ export default function AdminPage() {
                             <div className="flex items-center justify-between p-4 border-b border-white/5">
                               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap
                                 ${appt.status === 'confirmed' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
-                                  appt.status === 'booked'    ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
+                                  appt.status === 'booked' || appt.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                   'bg-white/5 text-white/50 border-white/10'}`}>
                                 {appt.status === 'confirmed' ? (isRTL ? 'مؤكد' : 'Confirmed') :
-                                 appt.status === 'booked'    ? (isRTL ? 'انتظار' : 'Waiting') :
+                                 appt.status === 'booked' || appt.status === 'pending' ? (isRTL ? 'انتظار' : 'Waiting') :
                                  appt.status}
                               </span>
                               <div className="flex flex-col items-end">
@@ -607,6 +735,17 @@ export default function AdminPage() {
                                   {isRTL ? 'تأكيد' : 'Confirm'}
                                 </button>
                               )}
+                              <button onClick={() => setEditingAppt({
+                                  id: appt._id,
+                                  barberId: appt.barberId,
+                                  name: appt.customerName,
+                                  age: appt.customerAge,
+                                  phone: appt.customerPhone,
+                                  email: appt.customerEmail
+                                })}
+                                className="px-4 py-2 bg-white/5 text-white hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold transition-colors">
+                                {isRTL ? 'تعديل' : 'Edit'}
+                              </button>
                               <button onClick={() => handleCancel(appt._id, appt.customerName)}
                                 className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-bold transition-colors">
                                 {isRTL ? 'إلغاء الحجز' : 'Cancel'}
