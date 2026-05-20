@@ -25,7 +25,7 @@ function getReminderTime(date: string, timeSlot: string) {
     const utcTarget = targetDate.getTime() - (3 * 60 * 60 * 1000);
     
     return utcTarget - (15 * 60 * 1000);
-  } catch (e) {
+  } catch {
     return null;
   }
 }
@@ -111,7 +111,7 @@ export const getSlots = query({
       let status: "available" | "booked" | "blocked" | "confirmed" | "pending" | "outside" = isBlocked 
         ? "blocked"
         : (existingStatus === "booked" || existingStatus === "blocked" || existingStatus === "confirmed" || existingStatus === "pending")
-          ? existingStatus as any
+          ? existingStatus
           : "available";
 
       // T-Fix: Block past slots if date is today (Assume Egypt Time UTC+3)
@@ -120,7 +120,7 @@ export const getSlots = query({
       
       if (status === "available" && date === todayEgypt) {
         const slotTime = new Date(date);
-        let h = actualHours;
+        const h = actualHours;
         // T-Fix: If slot is 12 AM and we're looking at a day that starts in the morning,
         // it's actually midnight TONIGHT (start of next day), not the past midnight.
         if (h === 0) {
@@ -154,7 +154,7 @@ export const getSlots = query({
         status: isBlocked
           ? "blocked"
           : (existingStatus === "booked" || existingStatus === "blocked" || existingStatus === "confirmed" || existingStatus === "pending")
-            ? existingStatus as any
+            ? existingStatus
             : "available",
       });
     }
