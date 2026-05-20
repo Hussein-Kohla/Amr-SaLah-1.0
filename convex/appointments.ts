@@ -11,7 +11,10 @@ function getReminderTime(date: string, timeSlot: string) {
     const mins = parseInt(timeMatch[2]);
     const period = timeMatch[3]?.toUpperCase();
     if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
+    // T-Fix: In a salon context, 12 AM usually means the end of the shift for the current date.
+    // Setting hours to 24 makes it rollover to 00:00 of the NEXT day, so the reminder
+    // is sent at 11:45 PM of the CURRENT day, which is correct.
+    if (period === 'AM' && hours === 12) hours = 24;
     
     // date is YYYY-MM-DD. We assume Egypt time (UTC+3)
     // To handle this correctly in Convex (which uses UTC), we should construct the date 
