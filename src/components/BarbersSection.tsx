@@ -124,6 +124,22 @@ const fallbackBarbers: any[] = [
     workingHours: { start: '13:00', end: '01:00' },
     isActive: true,
   },
+  {
+    _id: '3',
+    nameAr: 'محمد صلاح',
+    nameEn: 'Mohamed Salah',
+    photoUrl: '/barber-3.jpg',
+    workingHours: { start: '13:00', end: '01:00' },
+    isActive: true,
+  },
+  {
+    _id: '4',
+    nameAr: 'مصطفى طه',
+    nameEn: 'Mustafa Taha',
+    photoUrl: '/barber-4.jpg',
+    workingHours: { start: '13:00', end: '01:00' },
+    isActive: true,
+  },
 ];
 
 export default function BarbersSection() {
