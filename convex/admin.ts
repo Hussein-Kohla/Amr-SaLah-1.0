@@ -34,7 +34,7 @@ export const getAppointments = query({
 export const updateAppointmentStatus = mutation({
   args: { 
     id: v.id("bookings"),
-    status: v.union(v.literal("available"), v.literal("booked"), v.literal("blocked"), v.literal("confirmed"))
+    status: v.union(v.literal("available"), v.literal("booked"), v.literal("blocked"), v.literal("confirmed"), v.literal("cancelled"))
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { status: args.status });

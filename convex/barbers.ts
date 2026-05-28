@@ -1,4 +1,5 @@
 import { query, mutation } from "./_generated/server";
+import { v } from "convex/values";
 
 const DEFAULT_WORKING_HOURS = { start: "13:00", end: "01:00" } as const;
 
@@ -77,5 +78,30 @@ export const populate = mutation({
         isActive: true,
       });
     }
+  },
+});
+
+export const getAllBarbers = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("barbers").collect();
+  },
+});
+
+export const updateBarber = mutation({
+  args: {
+    id: v.id("barbers"),
+    isActive: v.boolean(),
+    availableDays: v.optional(v.array(v.number())),
+    startDate: v.optional(v.string()),
+    endDate: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.id, {
+      isActive: args.isActive,
+      availableDays: args.availableDays,
+      startDate: args.startDate,
+      endDate: args.endDate,
+    });
   },
 });

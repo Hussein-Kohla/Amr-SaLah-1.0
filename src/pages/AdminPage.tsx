@@ -7,11 +7,12 @@ import { useNavigate } from 'react-router-dom'
 import type { Id } from '../../convex/_generated/dataModel'
 import AdminScheduleManager from '../components/AdminScheduleManager'
 import AdminBlacklistManager from '../components/AdminBlacklistManager'
+import AdminBarberManager from '../components/AdminBarberManager'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type SnackType = 'success' | 'error'
 interface SnackItem { id: number; type: SnackType; title: string; message: string }
-interface ConfirmTarget { id: Id<'bookings'>; label: string }
+interface ConfirmTarget { id: Id<'bookings'>; label: string; action: 'cancel' | 'delete' }
 
 // ─── Snackbar ────────────────────────────────────────────────────────────────
 function Snackbar({ item, onClose }: { item: SnackItem; onClose: (id: number) => void }) {
@@ -207,7 +208,7 @@ export default function AdminPage() {
     return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`
   })
   const [confirmTarget, setConfirmTarget] = useState<ConfirmTarget | null>(null)
-  const [activeTab, setActiveTab] = useState<'all' | 'confirmed' | 'booked' | 'blacklist'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'confirmed' | 'booked' | 'blacklist' | 'barbers' | 'cancelled'>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState<'name' | 'phone' | 'email' | 'age' | 'barber' | ''>('')
 
@@ -225,6 +226,7 @@ export default function AdminPage() {
     age: number;
     phone: string;
     email?: string;
+    status: string;
   } | null>(null)
 
   const addSnack = useCallback((type: SnackType, title: string, message: string) => {
@@ -256,13 +258,22 @@ export default function AdminPage() {
   }
 
   const handleCancel = (id: Id<'bookings'>, name: string) => {
-    setConfirmTarget({ id, label: isRTL ? `هل تريد إلغاء حجز "${name}"؟` : `Remove "${name}"'s appointment?` })
+    setConfirmTarget({ id, label: isRTL ? `هل تريد إلغاء حجز "${name}"؟` : `Cancel "${name}"'s appointment?`, action: 'cancel' })
+  }
+
+  const handlePermanentDelete = (id: Id<'bookings'>, name: string) => {
+    setConfirmTarget({ id, label: isRTL ? `هل أنت متأكد من الحذف النهائي لحجز "${name}"؟ لا يمكن التراجع عن هذه الخطوة.` : `Permanently delete "${name}"'s appointment? This cannot be undone.`, action: 'delete' })
   }
 
   const doDelete = async () => {
     if (!confirmTarget) return
-    await deleteAppt({ id: confirmTarget.id })
-    addSnack('error', isRTL ? 'تم الإلغاء' : 'Cancelled', isRTL ? 'تم إلغاء الحجز بنجاح' : 'Appointment has been removed')
+    if (confirmTarget.action === 'cancel') {
+      await updateStatus({ id: confirmTarget.id, status: 'cancelled' })
+      addSnack('error', isRTL ? 'تم الإلغاء' : 'Cancelled', isRTL ? 'تم إلغاء الحجز بنجاح' : 'Appointment has been cancelled')
+    } else {
+      await deleteAppt({ id: confirmTarget.id })
+      addSnack('error', isRTL ? 'تم الحذف' : 'Deleted', isRTL ? 'تم حذف الحجز نهائياً' : 'Appointment has been permanently deleted')
+    }
     setConfirmTarget(null)
   }
 
@@ -273,12 +284,17 @@ export default function AdminPage() {
       await updateAppt({
         id: editingAppt.id,
         barberId: editingAppt.barberId,
-        customerName: editingAppt.name.trim(),
-        customerAge: Number(editingAppt.age),
-        customerPhone: editingAppt.phone.trim(),
-        customerEmail: editingAppt.email?.trim() || undefined,
+        customerName: editingAppt.name,
+        customerAge: editingAppt.age,
+        customerPhone: editingAppt.phone,
+        customerEmail: editingAppt.email || undefined
       })
-      addSnack('success', isRTL ? 'تم التحديث' : 'Updated', isRTL ? 'تم تحديث بيانات الحجز بنجاح' : 'Appointment details updated successfully')
+      if (editingAppt.status === 'cancelled') {
+        await updateStatus({ id: editingAppt.id, status: 'booked' })
+        addSnack('success', isRTL ? 'تم الاستعادة' : 'Restored', isRTL ? 'تم استعادة الحجز بنجاح' : 'Appointment restored successfully')
+      } else {
+        addSnack('success', isRTL ? 'تم التحديث' : 'Updated', isRTL ? 'تم تحديث بيانات الحجز بنجاح' : 'Appointment updated successfully')
+      }
       setEditingAppt(null)
     } catch (err) {
       addSnack('error', 'Error', 'Failed to update appointment')
@@ -333,7 +349,9 @@ export default function AdminPage() {
   // 2. Filter by Tab (Status)
   const tabFiltered = dateFiltered.filter(a => {
     if (activeTab === 'confirmed') return a.status === 'confirmed'
-    if (activeTab === 'booked') return a.status === 'booked'
+    if (activeTab === 'booked') return a.status === 'booked' || a.status === 'pending'
+    if (activeTab === 'cancelled') return a.status === 'cancelled'
+    if (activeTab === 'all') return a.status !== 'cancelled' // Hide cancelled from 'All' tab to avoid clutter
     return true
   })
 
@@ -341,6 +359,15 @@ export default function AdminPage() {
   const searched = tabFiltered.filter(a => {
     const q = searchQuery.toLowerCase().trim()
     if (!q) return true
+    
+    if (sortBy === 'name') return a.customerName.toLowerCase().includes(q)
+    if (sortBy === 'phone') return a.customerPhone.includes(q)
+    if (sortBy === 'email') return a.customerEmail?.toLowerCase().includes(q)
+    if (sortBy === 'age') return a.customerAge.toString().includes(q)
+    if (sortBy === 'barber') {
+      return (a.barber?.nameAr.toLowerCase().includes(q)) || (a.barber?.nameEn.toLowerCase().includes(q))
+    }
+
     return (
       a.customerName.toLowerCase().includes(q) ||
       a.customerPhone.includes(q) ||
@@ -499,12 +526,15 @@ export default function AdminPage() {
 
                 <div className="flex gap-4 pt-6">
                   <button type="button" onClick={() => setEditingAppt(null)}
-                    className="flex-1 py-4 rounded-2xl bg-white/5 text-white font-bold text-sm hover:bg-white/10 transition-all border border-white/10">
+                    className="flex-1 py-4 rounded-2xl bg-white/5 text-white font-bold text-sm hover:bg-white/10 transition-all border border-white/10 cursor-pointer">
                     {isRTL ? 'تراجع' : 'Cancel'}
                   </button>
                   <button type="submit"
-                    className="flex-1 py-4 rounded-2xl bg-accent text-primary font-black text-sm hover:brightness-110 transition-all shadow-lg shadow-accent/20">
-                    {isRTL ? 'حفظ التعديلات' : 'Save Changes'}
+                    className={`flex-1 py-4 rounded-2xl text-primary font-black text-sm hover:brightness-110 transition-all shadow-lg cursor-pointer
+                      ${editingAppt.status === 'cancelled' ? 'bg-emerald-500 shadow-emerald-500/20' : 'bg-accent shadow-accent/20'}`}>
+                    {editingAppt.status === 'cancelled' 
+                      ? (isRTL ? 'استعادة الحجز' : 'Restore') 
+                      : (isRTL ? 'حفظ التعديلات' : 'Save Changes')}
                   </button>
                 </div>
               </form>
@@ -575,6 +605,11 @@ export default function AdminPage() {
                   <div className="text-3xl font-black text-[#e09030]">{stats.waiting}</div>
                   <div className="text-xs text-white/40 font-medium mt-1">{isRTL ? 'انتظار' : 'Waiting'}</div>
                 </div>
+                <div className="bg-gradient-to-br from-[#16161f] to-[#1c1c28] border border-white/5 rounded-2xl p-4 text-center relative overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-[#ef4444] to-transparent" />
+                  <div className="text-3xl font-black text-[#ef4444]">{dateFiltered.filter(a => a.status === 'cancelled').length}</div>
+                  <div className="text-xs text-white/40 font-medium mt-1">{isRTL ? 'ملغية' : 'Cancelled'}</div>
+                </div>
               </div>
 
               {/* Advanced Controls: Search & Sort */}
@@ -637,10 +672,22 @@ export default function AdminPage() {
                   {isRTL ? 'الانتظار' : 'Waiting'}
                 </button>
                 <button
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'cancelled' ? 'bg-gradient-to-br from-[#ef4444] to-[#f87171] text-white shadow-lg shadow-red-500/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                  onClick={() => setActiveTab('cancelled')}
+                >
+                  {isRTL ? 'الملغية' : 'Cancelled'}
+                </button>
+                <button
                   className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'blacklist' ? 'bg-gradient-to-br from-[#ef4444] to-[#f87171] text-white shadow-lg shadow-red-500/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
                   onClick={() => setActiveTab('blacklist')}
                 >
                   {isRTL ? 'الحظر' : 'Blacklist'}
+                </button>
+                <button
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all ${activeTab === 'barbers' ? 'bg-gradient-to-br from-[#8b5cf6] to-[#a78bfa] text-white shadow-lg shadow-purple-500/20' : 'text-white/40 hover:text-white hover:bg-white/5'}`}
+                  onClick={() => setActiveTab('barbers')}
+                >
+                  {isRTL ? 'الحلاقين' : 'Barbers'}
                 </button>
               </div>
 
@@ -664,6 +711,10 @@ export default function AdminPage() {
                 {activeTab === 'blacklist' ? (
                   <div className="flex-1 w-full z-10 relative">
                     <AdminBlacklistManager isRTL={isRTL} onSnack={addSnack} />
+                  </div>
+                ) : activeTab === 'barbers' ? (
+                  <div className="flex-1 w-full z-10 relative">
+                    <AdminBarberManager isRTL={isRTL} onSnack={addSnack} />
                   </div>
                 ) : (
                   /* ── Cards Grid ── */
@@ -690,9 +741,11 @@ export default function AdminPage() {
                             <div className="flex items-center justify-between p-4 border-b border-white/5">
                               <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold border whitespace-nowrap
                                 ${appt.status === 'confirmed' ? 'bg-green-500/10 text-green-400 border-green-500/20' :
+                                  appt.status === 'cancelled' ? 'bg-red-500/10 text-red-400 border-red-500/20' :
                                   appt.status === 'booked' || appt.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                   'bg-white/5 text-white/50 border-white/10'}`}>
                                 {appt.status === 'confirmed' ? (isRTL ? 'مؤكد' : 'Confirmed') :
+                                 appt.status === 'cancelled' ? (isRTL ? 'ملغي' : 'Cancelled') :
                                  appt.status === 'booked' || appt.status === 'pending' ? (isRTL ? 'انتظار' : 'Waiting') :
                                  appt.status}
                               </span>
@@ -729,7 +782,7 @@ export default function AdminPage() {
                             </div>
 
                             <div className="p-3 border-t border-white/5 flex justify-end gap-2 bg-black/20">
-                              {appt.status !== 'confirmed' && (
+                              {appt.status !== 'confirmed' && appt.status !== 'cancelled' && (
                                 <button onClick={() => handleConfirm(appt._id)}
                                   className="px-4 py-2 bg-green-500/10 text-green-400 hover:bg-green-500/20 border border-green-500/20 rounded-lg text-xs font-bold transition-colors">
                                   {isRTL ? 'تأكيد' : 'Confirm'}
@@ -741,15 +794,23 @@ export default function AdminPage() {
                                   name: appt.customerName,
                                   age: appt.customerAge,
                                   phone: appt.customerPhone,
-                                  email: appt.customerEmail
+                                  email: appt.customerEmail,
+                                  status: appt.status
                                 })}
                                 className="px-4 py-2 bg-white/5 text-white hover:bg-white/10 border border-white/10 rounded-lg text-xs font-bold transition-colors">
                                 {isRTL ? 'تعديل' : 'Edit'}
                               </button>
-                              <button onClick={() => handleCancel(appt._id, appt.customerName)}
-                                className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-bold transition-colors">
-                                {isRTL ? 'إلغاء الحجز' : 'Cancel'}
-                              </button>
+                              {appt.status !== 'cancelled' ? (
+                                <button onClick={() => handleCancel(appt._id, appt.customerName)}
+                                  className="px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 border border-red-500/20 rounded-lg text-xs font-bold transition-colors">
+                                  {isRTL ? 'إلغاء الحجز' : 'Cancel'}
+                                </button>
+                              ) : (
+                                <button onClick={() => handlePermanentDelete(appt._id, appt.customerName)}
+                                  className="px-4 py-2 bg-red-600/20 text-red-300 hover:bg-red-600/30 border border-red-600/30 rounded-lg text-xs font-bold transition-colors">
+                                  {isRTL ? 'إلغاء نهائيا' : 'Delete'}
+                                </button>
+                              )}
                             </div>
                           </div>
                         ))}

@@ -27,6 +27,9 @@ export default defineSchema({
       start: v.string(),
       end: v.string(),
     }),
+    availableDays: v.optional(v.array(v.number())),
+    startDate: v.optional(v.string()), // Format: YYYY-MM-DD
+    endDate: v.optional(v.string()),   // Format: YYYY-MM-DD
     isActive: v.boolean(),
   }),
 
@@ -41,7 +44,8 @@ export default defineSchema({
       v.literal("blocked"),
       v.literal("confirmed"),
       v.literal("pending"),
-      v.literal("rejected")
+      v.literal("rejected"),
+      v.literal("cancelled")
     ),
     customerName: v.string(),
     customerAge: v.number(),
@@ -51,7 +55,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_barber_date", ["barberId", "date"])
-    .index("by_date", ["date"]),
+    .index("by_date", ["date"])
+    .index("by_customer_phone", ["customerPhone"]),
 
   admins: defineTable({
     password: v.string(),

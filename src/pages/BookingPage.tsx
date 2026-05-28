@@ -10,6 +10,7 @@ import DateStrip from '../components/DateStrip'
 import BarberSelector from '../components/BarberSelector'
 import SlotGrid from '../components/SlotGrid'
 import BookingModal from '../components/BookingModal'
+import MyBookingsModal from '../components/MyBookingsModal'
 import { usePWA } from '../hooks/usePWA'
 
 export default function BookingPage() {
@@ -37,8 +38,20 @@ export default function BookingPage() {
     // Re-open modal if we have a saved time on refresh
     return !!localStorage.getItem('barberpro_selected_time')
   })
+  const [isMyBookingsOpen, setIsMyBookingsOpen] = useState(false)
 
   const barbers = useQuery(api.barbers.getBarbers)
+  
+  const availableBarbers = barbers?.filter((b: any) => {
+    if (b.startDate && selectedDate < b.startDate) return false;
+    if (b.endDate && selectedDate > b.endDate) return false;
+    
+    if (!b.availableDays || b.availableDays.length === 0) return true;
+    const [year, month, day] = selectedDate.split('-');
+    const dateObj = new Date(Number(year), Number(month) - 1, Number(day));
+    return b.availableDays.includes(dateObj.getDay());
+  })
+
   const slots = useQuery(
     api.appointments.getSlots,
     selectedBarberId ? { barberId: selectedBarberId, date: selectedDate } : 'skip'
@@ -68,14 +81,14 @@ export default function BookingPage() {
   }, [selectedTime])
 
   useEffect(() => {
-    if (barbers && barbers.length > 0) {
-      const isValid = barbers.some((b: any) => b._id === selectedBarberId)
-      if (!isValid && !selectedBarberId) {
-        setSelectedBarberId(barbers[0]._id)
+    if (availableBarbers && availableBarbers.length > 0) {
+      const isValid = availableBarbers.some((b: any) => b._id === selectedBarberId)
+      if (!isValid && (!selectedBarberId || barbers?.some((b:any) => b._id === selectedBarberId))) {
+        setSelectedBarberId(availableBarbers[0]._id)
         setSelectedTime(null)
       }
     }
-  }, [barbers, selectedBarberId])
+  }, [availableBarbers, selectedBarberId, barbers])
 
   const handleDateChange = (date: string) => { 
     setSelectedDate(date)
@@ -139,6 +152,21 @@ export default function BookingPage() {
                   {isRTL ? 'EN' : 'العربية'}
                 </span>
               </motion.button>
+
+              {/* My Bookings Button */}
+              <motion.button
+                onClick={() => setIsMyBookingsOpen(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/40
+                           text-accent text-xs font-medium hover:bg-accent hover:text-primary
+                           transition-all duration-200 cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <span>📅</span>
+                <span className={isRTL ? 'font-arabic' : 'font-english'}>
+                  {isRTL ? 'حجوزاتي' : 'My Bookings'}
+                </span>
+              </motion.button>
             </div>
           </div>
           <h1 className={`text-3xl font-bold text-white mb-1 ${isRTL ? 'font-arabic' : 'font-english'}`}>
@@ -164,7 +192,7 @@ export default function BookingPage() {
           <h2 className={`text-xs font-semibold tracking-widest text-accent/70 uppercase mb-4 ${isRTL ? 'font-arabic' : 'font-english'}`}>
             {t('booking.step2')}
           </h2>
-          {barbers === undefined ? (
+          {availableBarbers === undefined ? (
             <div className="flex gap-4">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="flex flex-col items-center gap-2 animate-pulse">
@@ -174,7 +202,7 @@ export default function BookingPage() {
               ))}
             </div>
           ) : (
-            <BarberSelector barbers={barbers} selectedId={selectedBarberId} onSelect={handleBarberChange} />
+            <BarberSelector barbers={availableBarbers} selectedId={selectedBarberId} onSelect={handleBarberChange} />
           )}
         </section>
 
@@ -227,6 +255,11 @@ export default function BookingPage() {
           onConfirmed={() => {}}
         />
       )}
+
+      <MyBookingsModal 
+        isOpen={isMyBookingsOpen}
+        onClose={() => setIsMyBookingsOpen(false)}
+      />
     </div>
   )
 }
