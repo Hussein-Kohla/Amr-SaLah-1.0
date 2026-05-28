@@ -52,7 +52,7 @@ export default function LocationSection() {
           >
             <iframe
               title={t('location.sectionTitle')}
-              src="https://maps.google.com/maps?q=سوبر%20ماركت%20دكان%20الحي%2C%20بني%20سويف%2C%20مصر&t=&z=17&ie=UTF8&iwloc=&output=embed"
+              src="https://maps.google.com/maps?q=29.0672738,31.1074394&t=&z=17&ie=UTF8&iwloc=&output=embed"
               width="100%"
               height="100%"
               style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)' }}
