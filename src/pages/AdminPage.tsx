@@ -745,7 +745,7 @@ export default function AdminPage() {
                                   appt.status === 'booked' || appt.status === 'pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
                                   'bg-white/5 text-white/50 border-white/10'}`}>
                                 {appt.status === 'confirmed' ? (isRTL ? 'مؤكد' : 'Confirmed') :
-                                 appt.status === 'cancelled' ? (isRTL ? 'ملغي' : 'Cancelled') :
+                                 appt.status === 'cancelled' ? (isRTL ? `ملغي (${appt.cancelledBy === 'admin' ? 'الأدمن' : appt.cancelledBy === 'customer' ? 'العميل' : '—'})` : `Cancelled (${appt.cancelledBy === 'admin' ? 'Admin' : appt.cancelledBy === 'customer' ? 'Customer' : '—'})`) :
                                  appt.status === 'booked' || appt.status === 'pending' ? (isRTL ? 'انتظار' : 'Waiting') :
                                  appt.status}
                               </span>

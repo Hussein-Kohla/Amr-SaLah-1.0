@@ -37,7 +37,11 @@ export const updateAppointmentStatus = mutation({
     status: v.union(v.literal("available"), v.literal("booked"), v.literal("blocked"), v.literal("confirmed"), v.literal("cancelled"))
   },
   handler: async (ctx, args) => {
-    await ctx.db.patch(args.id, { status: args.status });
+    const patchData: any = { status: args.status };
+    if (args.status === "cancelled") {
+      patchData.cancelledBy = "admin";
+    }
+    await ctx.db.patch(args.id, patchData);
   },
 });
 

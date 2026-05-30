@@ -318,7 +318,7 @@ export const cancelBooking = mutation({
     }
 
     // Set status to cancelled so it is freed up in schedule but kept in DB
-    await ctx.db.patch(args.bookingId, { status: "cancelled" });
+    await ctx.db.patch(args.bookingId, { status: "cancelled", cancelledBy: "customer" });
 
     // We should ideally cancel scheduled emails but Convex scheduler 
     // doesn't have an easy "cancel job by tag" out of the box unless we stored the jobId.

@@ -53,6 +53,7 @@ export default defineSchema({
     customerEmail: v.optional(v.string()),
     wantsReminder: v.optional(v.boolean()),
     createdAt: v.number(),
+    cancelledBy: v.optional(v.union(v.literal("admin"), v.literal("customer"))),
   })
     .index("by_barber_date", ["barberId", "date"])
     .index("by_date", ["date"])
