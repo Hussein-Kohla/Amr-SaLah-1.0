@@ -1,29 +1,45 @@
 import { motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
+import { useQuery } from 'convex/react'
+import { api } from '../../convex/_generated/api'
+import { useEffect, useState } from 'react'
 
 interface DateStripProps {
   selectedDate: string
   onSelectDate: (date: string) => void
 }
 
-function getNext7Days(lang: string) {
+function getNext7Days(lang: string, serverTimeMs?: number) {
   const days = []
-  const today = new Date()
+  const now = serverTimeMs ? new Date(serverTimeMs) : new Date()
   const isAR = lang === 'ar'
   
   for (let i = 0; i < 7; i++) {
-    const d = new Date(today)
-    d.setDate(today.getDate() + i)
+    const targetMs = now.getTime() + (i * 24 * 60 * 60 * 1000);
+    const d = new Date(targetMs);
     
-    // We use 'ar-EG' to get Arabic names, but we might need to handle the digits manually
-    // or use the 'u-nu-latn' extension to force Latin (Western) digits.
     const locale = isAR ? 'ar-EG-u-nu-latn' : 'en-US'
     
+    // Get MM/DD/YYYY in Cairo timezone
+    const cairoDateStr = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'Africa/Cairo',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(d);
+    
+    const [month, day, year] = cairoDateStr.split('/');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    const dayName = new Intl.DateTimeFormat(locale, { timeZone: 'Africa/Cairo', weekday: 'short' }).format(d);
+    const dayNum = parseInt(day, 10);
+    const monthName = new Intl.DateTimeFormat(locale, { timeZone: 'Africa/Cairo', month: 'short' }).format(d);
+    
     days.push({
-      dateStr: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
-      dayName: d.toLocaleDateString(locale, { weekday: 'short' }),
-      dayNum: d.getDate(),
-      monthName: d.toLocaleDateString(locale, { month: 'short' }),
+      dateStr,
+      dayName,
+      dayNum,
+      monthName,
     })
   }
   return days
@@ -32,8 +48,17 @@ function getNext7Days(lang: string) {
 export default function DateStrip({ selectedDate, onSelectDate }: DateStripProps) {
   const { t, i18n } = useTranslation()
   const isRTL = i18n.language === 'ar'
-  const days = getNext7Days(i18n.language)
+  
+  const serverTime = useQuery(api.appointments.getServerTime)
+  const days = getNext7Days(i18n.language, serverTime ?? undefined)
   const today = days[0].dateStr
+
+  // Automatically select today's date if selectedDate is not in the list (e.g. if it was a past date from before the fix)
+  useEffect(() => {
+    if (days.length > 0 && !days.find(d => d.dateStr === selectedDate)) {
+      onSelectDate(today)
+    }
+  }, [days, selectedDate, onSelectDate, today])
 
   return (
     <div className="w-full overflow-x-auto pb-2 hide-scrollbar">

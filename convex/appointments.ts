@@ -189,6 +189,13 @@ export const createAppointment = mutation({
       throw new Error("SLOT_TAKEN");
     }
 
+    // T-Fix: Block past dates based on real server time in Egypt
+    const nowEgypt = new Date(Date.now() + 3 * 60 * 60 * 1000);
+    const todayEgypt = nowEgypt.toISOString().split('T')[0];
+    if (args.date < todayEgypt) {
+      throw new Error("INVALID_DATE_PAST");
+    }
+
     // Check if customer is blocked by email or phone
     const emailToCheck = args.customerEmail?.trim().toLowerCase();
     const phoneToCheck = args.customerPhone.replace(/\s/g, '');
@@ -239,6 +246,13 @@ export const createAppointment = mutation({
     }
 
     return id;
+  },
+});
+
+export const getServerTime = query({
+  args: {},
+  handler: async () => {
+    return Date.now();
   },
 });
 
